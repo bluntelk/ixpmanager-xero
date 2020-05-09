@@ -1,0 +1,28 @@
+{
+    "name": "bluntelk/ixp-manager-xero",
+    "description": "IXP Manager Integration with Xero",
+    "type": "library",
+    "require": {
+        "xeroapi/xero-php-oauth2": "dev-master"
+    },
+    "license": "LGPL",
+    "authors": [
+        {
+            "name": "Jason Playne",
+            "email": "jason@jasonplayne.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "autoload": {
+        "psr-4": {
+            "bluntelk\\IxpManagerXero": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "bluntelk\\IxpManagerXero\\IxpManagerXeroServiceProvider"
+            ]
+        }
+    }
+}
