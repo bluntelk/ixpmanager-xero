@@ -3,7 +3,8 @@
     "description": "IXP Manager Integration with Xero",
     "type": "library",
     "require": {
-        "xeroapi/xero-php-oauth2": "dev-master"
+        "xeroapi/xero-php-oauth2": "dev-master",
+        "foil/foil": "0.*"
     },
     "license": "LGPL",
     "authors": [
@@ -15,7 +16,7 @@
     "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
-            "bluntelk\\IxpManagerXero": "src/"
+            "bluntelk\\IxpManagerXero\\": "src/"
         }
     },
     "extra": {

@@ -26,7 +26,7 @@ class IxpManagerXeroServiceProvider extends ServiceProvider
         $this->loadRoutesFrom(__DIR__ . '/routes.php');
         $this->loadViewsFrom(__DIR__ . '/views/', 'IxpManagerXero');
         $this->publishes([
-            __DIR__.'/views' => base_path('')
+            __DIR__.'/views' => base_path('resources/views/bluntelk/IxpManagerXero')
         ]);
     }
 }
