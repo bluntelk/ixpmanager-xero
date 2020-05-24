@@ -3,8 +3,9 @@
     "description": "IXP Manager Integration with Xero",
     "type": "library",
     "require": {
-        "xeroapi/xero-php-oauth2": "dev-master",
-        "foil/foil": "0.*"
+        "laravel/framework": "^6.0",
+        "foil/foil": "~0.6",
+        "webfox/laravel-xero-oauth2": "dev-master"
     },
     "license": "LGPL",
     "authors": [
@@ -22,7 +23,7 @@
     "extra": {
         "laravel": {
             "providers": [
-                "bluntelk\\IxpManagerXero\\IxpManagerXeroServiceProvider"
+                "bluntelk\\IxpManagerXero\\IxpXeroServiceProvider"
             ]
         }
     }

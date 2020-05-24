@@ -1,5 +1,7 @@
 <?php
 
-use bluntelk\IxpManagerXero\IxpManagerXeroController;
+use bluntelk\IxpManagerXero\Controllers\XeroController;
 
-Route::resource('/integration/xero', IxpManagerXeroController::class);
+Route::group( [ 'middleware' => [ 'web' ] ], function() {
+    Route::get( '/admin/xero', [ XeroController::class, 'index' ] )->name( 'xero.auth.success' );
+} );
