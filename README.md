@@ -2,7 +2,7 @@
 
 ## Install Instructions
 
-    composer require bluntelk/ixp-manager-xero
+    composer require bluntelk/ixpmanager-xero
 
 
 ## Setting up Xero Config
