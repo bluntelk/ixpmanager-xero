@@ -20,6 +20,7 @@ $this->layout( 'layouts/ixpv4' );
     <a href="<?= route( 'xero.auth.authorize' ) ?>" class="btn btn-primary btn-large mt-4">
         Reconnect to Xero
     </a>
+    <pre><?= $t->errorExtra ?></pre>
 <?php elseif( $t->incorrectSetup ): ?>
     <h1>Please setup Xero Config</h1>
     <h2>Setting up Xero Config</h2>
@@ -32,6 +33,7 @@ $this->layout( 'layouts/ixpv4' );
     <p>This is the config for the package that we are using to handle the integration with Xero. You will need to include the following scopes</p>
     <ul>
         <li>accounting.contacts</li>
+        <li>accounting.settings.read</li>
     </ul>
     <p>The scopes config section may look a little like:</p>
     <pre class="border">
@@ -41,6 +43,7 @@ $this->layout( 'layouts/ixpv4' );
             'profile',
             'offline_access',
             'accounting.contacts',
+            'accounting.settings.read',
         ],</pre>
     <h2>Integrations</h2>
     <p>In the config file you can see the client id and client secret config are set from the environment. You can
@@ -52,9 +55,15 @@ $this->layout( 'layouts/ixpv4' );
 <?php elseif( $t->connected ): ?>
     <h1>You are connected to Xero</h1>
     <p><?= $t->organisationName ?> via <?= $t->username ?></p>
+<div class="btn-group">
     <a href="<?= route( 'xero.auth.authorize' ) ?>" class="btn btn-primary btn-large mt-4">
         Reconnect to Xero
     </a>
+    <a href="<?= route( 'xero.sync' ) ?>" class="btn btn-secondary btn-large mt-4">
+        View Sync Actions
+    </a>
+
+</div>
 <?php else: ?>
     <h1>You are not connected to Xero</h1>
     <a href="<?= route( 'xero.auth.authorize' ) ?>" class="btn btn-primary btn-large mt-4">

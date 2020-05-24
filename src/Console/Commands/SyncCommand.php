@@ -22,19 +22,22 @@ class SyncCommand extends Command
     {
         $this->output->title("IXP Manager -> Xero Sync");
 
-        $customerRepo = \D2EM::getRepository(Customer::class );
-
         $xeroSync = \App::make(XeroSync::class);
 
-        /** @var Customer[] $list */
-        $list = $customerRepo->getCurrentActive();
-        $this->info("There are " . count($list) . " members to sync", OutputInterface::VERBOSITY_VERBOSE);
-        foreach ($list as $customer) {
-            $this->info("* Syncing <comment>{$customer->getName()}</comment>", OutputInterface::VERBOSITY_VERBOSE);
+        $actions = $xeroSync->performSync();
 
-            $xeroSync->syncCustomerToXero($customer);
+        if ($this->verbosity >= OutputInterface::VERBOSITY_NORMAL) {
+            $rows = [];
+            foreach ($actions as $action) {
+                $rows[] = [
+                    $action->customer->getName(),
+                    $action->action,
+                    $action->performed ? 'Yes' : 'No',
+                    $action->failed ? 'No' : 'Yes',
+                    implode(".\n", $action->errors),
+                ];
+            }
+            $this->table(['Customer', 'Action', 'Performed?', 'Worked?', 'Errors'], $rows);
         }
-
-        $this->info('Sync Complete');
     }
 }
