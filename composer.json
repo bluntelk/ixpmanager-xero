@@ -7,7 +7,7 @@
         "foil/foil": "~0.6",
         "webfox/laravel-xero-oauth2": "dev-master"
     },
-    "license": "LGPL",
+    "license": "MIT",
     "authors": [
         {
             "name": "Jason Playne",
