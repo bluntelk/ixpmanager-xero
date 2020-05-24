@@ -1,5 +1,5 @@
 {
-    "name": "bluntelk/ixp-manager-xero",
+    "name": "bluntelk/ixpmanager-xero",
     "description": "IXP Manager Integration with Xero",
     "type": "library",
     "require": {
