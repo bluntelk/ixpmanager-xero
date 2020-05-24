@@ -18,11 +18,14 @@ class SyncCommand extends Command
         parent::__construct();
     }
 
-    public function handle()
+    public function handle(XeroSync $xeroSync)
     {
         $this->output->title("IXP Manager -> Xero Sync");
 
-        $xeroSync = \App::make(XeroSync::class);
+        if (!$xeroSync->isXeroConfigValid()) {
+            $this->error("Your Xero Config is invalid. Please follow the setup steps in the README.md", OutputInterface::VERBOSITY_QUIET);
+            return 1;
+        }
 
         $actions = $xeroSync->performSync();
 
@@ -39,5 +42,7 @@ class SyncCommand extends Command
             }
             $this->table(['Customer', 'Action', 'Performed?', 'Worked?', 'Errors'], $rows);
         }
+
+        return 0;
     }
 }

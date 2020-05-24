@@ -28,6 +28,9 @@ class XeroSync
      */
     private $logger;
 
+    protected $requiredScopes = [ 'accounting.contacts', 'accounting.settings.read' ];
+
+
     public function __construct(LoggerInterface $logger, OauthCredentialManager $xeroCredentials, AccountingApi $xero) {
         $this->xero = $xero;
         $this->xeroCredentials = $xeroCredentials;
@@ -35,8 +38,15 @@ class XeroSync
     }
 
 
-    public function syncCustomerToXero(Customer $customer)
+    public function isXeroConfigValid(): bool
     {
+        foreach( $this->requiredScopes as $scope ) {
+            if( !in_array( $scope, config( 'xero.oauth.scopes' ) ) ) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -68,6 +78,11 @@ class XeroSync
      */
     public function prepareSync(): array
     {
+        if (!$this->isXeroConfigValid()) {
+            $this->logger->error("Your Xero Integration Settings are Invalid.");
+            return [];
+        }
+
         $accountingContacts = $this->listXeroAccountingContacts();
 
         $actions = [];

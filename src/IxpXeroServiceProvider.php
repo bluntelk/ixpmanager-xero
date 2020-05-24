@@ -21,8 +21,7 @@ class IxpXeroServiceProvider extends ServiceProvider
     public function register()
     {
         $this->app->make( XeroController::class );
-        $this->mergeConfigFrom( __DIR__ . '/../config/xero.php', 'xero' );
-        config( 'xero.oauth.scopes', [ 'openid', 'email', 'profile', 'offline_access', 'accounting.contacts' ] );
+        $this->mergeConfigFrom( __DIR__ . '/../config/ixpxero.php', 'ixpxero' );
 
         $this->app->bind( XeroSync::class, function( Application $app ) {
             return new XeroSync(

@@ -16,7 +16,7 @@ class XeroController extends Controller
         $this->middleware( 'auth' );
     }
 
-    public function index( Request $request, OauthCredentialManager $xeroCredentials )
+    public function index( Request $request, OauthCredentialManager $xeroCredentials,  XeroSync $xeroSync )
     {
         try {
             // Check if we've got any stored credentials
@@ -32,14 +32,6 @@ class XeroController extends Controller
                 $username = "{$user['given_name']} {$user['family_name']} ({$user['username']})";
             }
 
-
-            $incorrectSetup = false;
-            foreach( $this->requiredScopes as $scope ) {
-                if( !in_array( $scope, config( 'xero.oauth.scopes' ) ) ) {
-                    $incorrectSetup = true;
-                }
-            }
-
         } catch( \throwable $e ) {
             // This can happen if the credentials have been revoked or there is an error with the organisation (e.g. it's expired)
             $error = $e->getMessage();
@@ -52,7 +44,7 @@ class XeroController extends Controller
             'errorExtra'       => $errorExtra ?? '',
             'organisationName' => $organisationName ?? false,
             'username'         => $username ?? false,
-            'incorrectSetup'   => $incorrectSetup ?? false,
+            'incorrectSetup'   => !$xeroSync->isXeroConfigValid() ?? false,
         ] );
     }
 
