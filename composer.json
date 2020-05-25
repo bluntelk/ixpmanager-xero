@@ -5,7 +5,7 @@
     "require": {
         "laravel/framework": "^6.0",
         "foil/foil": "~0.6",
-        "webfox/laravel-xero-oauth2": "dev-master"
+        "webfox/laravel-xero-oauth2": "~1.2"
     },
     "license": "MIT",
     "authors": [
