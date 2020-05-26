@@ -9,6 +9,8 @@ use Psr\Log\LoggerInterface;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
 use XeroAPI\XeroPHP\Models\Accounting\Address;
+use XeroAPI\XeroPHP\Models\Accounting\ContactGroup;
+use XeroAPI\XeroPHP\Models\Accounting\ContactGroups;
 use XeroAPI\XeroPHP\Models\Accounting\Contacts;
 use XeroAPI\XeroPHP\Models\Accounting\Contact;
 use XeroAPI\XeroPHP\Models\Accounting\Error;
@@ -70,6 +72,19 @@ class XeroSync
     }
 
     /**
+     * @return ContactGroup[]|ContactGroups
+     */
+    protected function listXeroAccountingContactGroups(): ContactGroups
+    {
+        Log::info("Asking Xero for Contact Groups");
+        /** @var ContactGroups $list */
+        $list = $this->xero->getContactGroups($this->xeroCredentials->getTenantId());
+        $n = count($list);
+        Log::info("Fetched $n records from Xero");
+        return $list;
+    }
+
+    /**
      * @return SyncAction[]
      */
     public function prepareSync(): array
@@ -108,96 +123,38 @@ class XeroSync
 
     public function performSync()
     {
-        $nullOr = function($value) {
-            return $value ? $value : null;
-        };
-        $trimNull = function(array $arr) {
-            foreach ($arr as $k => $v) {
-                if (is_null($v)) {
-                    unset($arr[$k]);
-                }
-            }
-            return $arr;
-        };
         $contacts = new Contacts();
         $syncActions = $this->prepareSync();
         foreach ($syncActions as $syncAction) {
             Log::info("About to perform sync action: {$syncAction}");
-            $c = $syncAction->customer;
-
-            if (!$c->getAutsys()) {
-                Log::warning("Action {$syncAction} cannot be performed, Member does not have an ASN to sync against");
-                continue;
-            }
 
             switch($syncAction->action) {
                 case SyncAction::ACTION_CREATE:
                 case SyncAction::ACTION_UPDATE:
-                    $memberAsn = 'AS' . $c->getAutsys();
 
-                    $address_registration = new Address($trimNull([
-                        'address_line1' => $nullOr($c->getRegistrationDetails()->getAddress1()),
-                        'address_line2' => $nullOr($c->getRegistrationDetails()->getAddress2()),
-                        'address_line3' => $nullOr($c->getRegistrationDetails()->getAddress3()),
-                        'city' => $nullOr($c->getRegistrationDetails()->getTownCity()),
-                        'postal_code' => $nullOr($c->getRegistrationDetails()->getPostcode()),
-                        'country' => $nullOr($c->getRegistrationDetails()->getCountry()),
-                    ]));
-
-                    $address_billing = new Address($trimNull([
-                        'address_line1' => $nullOr($c->getBillingDetails()->getBillingAddress1()),
-                        'address_line2' => $nullOr($c->getBillingDetails()->getBillingAddress2()),
-                        'address_line3' => $nullOr($c->getBillingDetails()->getBillingAddress3()),
-                        'city' => $nullOr($c->getBillingDetails()->getBillingTownCity()),
-                        'postal_code' => $nullOr($c->getBillingDetails()->getBillingPostcode()),
-                        'country' => $nullOr($c->getBillingDetails()->getBillingCountryName()),
-                        'attention_to' => $nullOr($c->getBillingDetails()->getBillingContactName()),
-                    ]));
-                    $addresses = [];
-                    if ($address_registration->valid() && "{}" != "{$address_registration}") {
-                        $addresses[] = $address_registration;
-                    }
-                    if ($address_billing->valid() && "{}" != "{$address_billing}") {
-                        $addresses[] = $address_billing;
-                    }
-
-                    $phones = [];
-                    $phone = new Phone([
-                        'phone_number' => $nullOr($c->getBillingDetails()->getBillingTelephone()),
-                    ]);
-                    if ($phone->valid() && '{}' != "{$phone}") {
-                        $phones[] = $phone;
-                    }
-
-                    $contact = new Contact([
-                        'contact_number' => $syncAction->getMemberId(),
-                        'is_customer' => true,
-                        'name' => $c->getName(),
-                        'first_name' => $nullOr($c->getBillingDetails()->getBillingContactName()),
-                        'last_name' => $memberAsn,
-                        'addresses' => $addresses ? $addresses : null,
-                        'email_address' => $nullOr($c->getBillingDetails()->getBillingEmail()),
-                        'phones' => $phones ? $phones : null,
-                    ]);
-                    $syncAction->performed = true;
+                    $contact = $this->makeXeroContact($syncAction);
 
                     if ($contact->valid()) {
                         $contacts[] = $contact;
+                        $syncAction->performed = true;
                     } else {
                         foreach ($contact->listInvalidProperties() as $invalidProperty) {
                             Log::error("Unable to perform {$syncAction}: $invalidProperty");
+                            $syncAction->errors[] = $invalidProperty;
                         }
                     }
-//                    echo "{$contact}"; die;
                     break;
                 case SyncAction::ACTION_DO_NOTHING:
-                    Log::debug("Successfully did nothing");
+//                    Log::debug("Successfully did nothing");
                     break;
             }
-
         }
 
-//        print_r($contacts);
+        if (!$contacts) {
+            Log::warning("There were no suitable contacts to sync");
+            return $syncActions;
+        }
+
         $n = count($contacts);
         Log::info("About to send $n contacts to Xero");
         try {
@@ -216,10 +173,9 @@ class XeroSync
                         }
                     }
                 }
-
-
             }
-            //print_r($result);
+
+            $this->ensureContactGroup(config('ixpxero.contact_group'));
         } catch(\XeroAPI\XeroPHP\ApiException $e) {
             Log::error($e->getMessage());
             Log::error($e->getResponseBody());
@@ -237,5 +193,124 @@ class XeroSync
             throw new \Exception("Failed to Sync. {$e->getMessage()}", 1, $e);
         }
         return $syncActions;
+    }
+
+    private function makeXeroContact(SyncAction $syncAction): Contact
+    {
+        $nullOr = function($value) {
+            return $value ? $value : null;
+        };
+        $trimNull = function(array $arr) {
+            foreach ($arr as $k => $v) {
+                if (is_null($v)) {
+                    unset($arr[$k]);
+                }
+            }
+            return $arr;
+        };
+
+        $c = $syncAction->customer;
+        $memberAsn = 'AS' . $c->getAutsys();
+
+        $address_registration = new Address($trimNull([
+            'address_line1' => $nullOr($c->getRegistrationDetails()->getAddress1()),
+            'address_line2' => $nullOr($c->getRegistrationDetails()->getAddress2()),
+            'address_line3' => $nullOr($c->getRegistrationDetails()->getAddress3()),
+            'city' => $nullOr($c->getRegistrationDetails()->getTownCity()),
+            'postal_code' => $nullOr($c->getRegistrationDetails()->getPostcode()),
+            'country' => $nullOr($c->getRegistrationDetails()->getCountry()),
+        ]));
+
+        $address_billing = new Address($trimNull([
+            'address_line1' => $nullOr($c->getBillingDetails()->getBillingAddress1()),
+            'address_line2' => $nullOr($c->getBillingDetails()->getBillingAddress2()),
+            'address_line3' => $nullOr($c->getBillingDetails()->getBillingAddress3()),
+            'city' => $nullOr($c->getBillingDetails()->getBillingTownCity()),
+            'postal_code' => $nullOr($c->getBillingDetails()->getBillingPostcode()),
+            'country' => $nullOr($c->getBillingDetails()->getBillingCountryName()),
+            'attention_to' => $nullOr($c->getBillingDetails()->getBillingContactName()),
+        ]));
+        $addresses = [];
+        if ($address_registration->valid() && "{}" != "{$address_registration}") {
+            $addresses[] = $address_registration;
+        }
+        if ($address_billing->valid() && "{}" != "{$address_billing}") {
+            $addresses[] = $address_billing;
+        }
+
+        $phones = [];
+        $phone = new Phone([
+            'phone_number' => $nullOr($c->getBillingDetails()->getBillingTelephone()),
+        ]);
+        if ($phone->valid() && '{}' != "{$phone}") {
+            $phones[] = $phone;
+        }
+
+//        $c->isReseller();
+        return new Contact([
+            'contact_number' => $syncAction->getMemberId(),
+            'is_customer' => true,
+            'is_supplier' => false,
+            'name' => $c->getName(),
+            'first_name' => $nullOr($c->getBillingDetails()->getBillingContactName()),
+            'last_name' => $memberAsn,
+            'addresses' => $addresses ? $addresses : null,
+            'email_address' => $nullOr($c->getBillingDetails()->getBillingEmail()),
+            'phones' => $phones ? $phones : null,
+        ]);
+    }
+
+    private function ensureContactGroup(string $configGroupName)
+    {
+        if (!$configGroupName) {
+            Log::debug("No config for contact group name, not adding contacts to any group");
+            return;
+        }
+
+        $groupToAddTo = null;
+        $names = [];
+        // get the contact group id of the group we want
+        foreach ($this->listXeroAccountingContactGroups() as $group) {
+            $names[] = $group->getName();
+            if ($group->getName() == $configGroupName) {
+                $groupToAddTo = $group;
+                Log::debug("Group To Add To {$group->getContactGroupId()}");
+                break;
+            }
+        }
+        if (!$groupToAddTo) {
+            $validNames = count($names) ? 'Valid Names include `' . implode('`, `', $names) . '`' : 'No Groups configured in Xero';
+            throw new \Exception("Specified Contact Group `{$configGroupName}` does not exist in Xero. {$validNames}");
+        }
+
+
+        // now make sure these users are all in their groups
+        // 1. get a fresh set of contacts (so any created ones have their id)
+        $syncActions = $this->prepareSync();
+        $toUpdate = new Contacts();
+        foreach ($syncActions as $syncAction) {
+            $accountingContact = $syncAction->accountingContact;
+            $found = false;
+            foreach ($accountingContact->getContactGroups() as $group) {
+                if ($group->getName() == $configGroupName) {
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                // contact is not yet in the right group
+                $c = new Contact(['contact_id' => $accountingContact->getContactId()]);
+                $toUpdate[] = $c;
+            }
+        }
+
+        $n = count($toUpdate);
+        Log::debug("$n contacts require being added to the {$configGroupName} (id={$groupToAddTo->getContactGroupId()}) group");
+        if ($toUpdate) {
+            Log::info("Updating contact groups");
+            $result = $this->xero->createContactGroupContacts($this->xeroCredentials->getTenantId(), $groupToAddTo->getContactGroupId(), $toUpdate);
+            print_r($result);
+        }
+
     }
 }
