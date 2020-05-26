@@ -11,6 +11,7 @@ use XeroAPI\XeroPHP\Api\AccountingApi;
 use XeroAPI\XeroPHP\Models\Accounting\Address;
 use XeroAPI\XeroPHP\Models\Accounting\ContactGroup;
 use XeroAPI\XeroPHP\Models\Accounting\ContactGroups;
+use XeroAPI\XeroPHP\Models\Accounting\ContactPerson;
 use XeroAPI\XeroPHP\Models\Accounting\Contacts;
 use XeroAPI\XeroPHP\Models\Accounting\Contact;
 use XeroAPI\XeroPHP\Models\Accounting\Error;
@@ -26,6 +27,8 @@ class XeroSync
      * @var OauthCredentialManager
      */
     private $xeroCredentials;
+
+    private $seenAsns = [];
 
     protected $requiredScopes = [ 'accounting.contacts', 'accounting.settings.read' ];
 
@@ -133,6 +136,7 @@ class XeroSync
                 case SyncAction::ACTION_UPDATE:
 
                     $contact = $this->makeXeroContact($syncAction);
+//                    print_r($contact);
 
                     if ($contact->valid()) {
                         $contacts[] = $contact;
@@ -160,6 +164,7 @@ class XeroSync
         try {
             /** @var Contact[] $retContacts */
             $retContacts = $this->xero->updateOrCreateContacts($this->xeroCredentials->getTenantId(), $contacts);
+//            print_r($retContacts);
             foreach ($retContacts as $retContact) {
                 if ($retContact->getHasValidationErrors()) {
                     foreach ($retContact->getValidationErrors() as $error) {
@@ -211,8 +216,13 @@ class XeroSync
 
         $c = $syncAction->customer;
         $memberAsn = 'AS' . $c->getAutsys();
+        if (isset($this->seenAsns[$memberAsn])) {
+            $memberAsn .= ",id={$c->getId()}";
+        }
+        $this->seenAsns[$memberAsn] = true;
 
         $address_registration = new Address($trimNull([
+            'address_type' => Address::ADDRESS_TYPE_POBOX,
             'address_line1' => $nullOr($c->getRegistrationDetails()->getAddress1()),
             'address_line2' => $nullOr($c->getRegistrationDetails()->getAddress2()),
             'address_line3' => $nullOr($c->getRegistrationDetails()->getAddress3()),
@@ -222,6 +232,7 @@ class XeroSync
         ]));
 
         $address_billing = new Address($trimNull([
+            'address_type' => Address::ADDRESS_TYPE_STREET,
             'address_line1' => $nullOr($c->getBillingDetails()->getBillingAddress1()),
             'address_line2' => $nullOr($c->getBillingDetails()->getBillingAddress2()),
             'address_line3' => $nullOr($c->getBillingDetails()->getBillingAddress3()),
@@ -239,24 +250,53 @@ class XeroSync
         }
 
         $phones = [];
-        $phone = new Phone([
-            'phone_number' => $nullOr($c->getBillingDetails()->getBillingTelephone()),
-        ]);
-        if ($phone->valid() && '{}' != "{$phone}") {
-            $phones[] = $phone;
+        // Xero wants all of these fields, we cannot provide them (at least easily) from a single field.
+        // TODO: look into https://github.com/Propaganistas/Laravel-Phone later
+//        $phone = new Phone([
+//            'phone_type' => Phone::PHONE_TYPE_OFFICE,
+//            'phone_number' => $nullOr($c->getBillingDetails()->getBillingTelephone()),
+//            'phone_area_code' => $nullOr($c->getBillingDetails()->getBillingCountry()),
+//            'phone_country_code' => $nullOr($c->getBillingDetails()->getBillingCountry()),
+//        ]);
+//        if ($phone->valid() && '{}' != "{$phone}") {
+//            $phones[] = $phone;
+//        }
+        $persons = [];
+        $roleStr = config('ixpxero.billing_contact_role');
+        /** @var \Entities\ContactGroup $role */
+        $role = \D2EM::getRepository(\Entities\ContactGroup::class)->findOneBy(['name' => $roleStr]);
+
+        if ($role) {
+            foreach ($c->getContacts() as $customerContact) {
+                Log::debug("Finding contacts to add for role {$roleStr} (id={$role->getId()})");
+                $hasGroup = $customerContact->getGroups()->exists(function($key, $element) use ($role) {
+                    return $role === $element;
+                });
+                if ($hasGroup) {
+                    $persons[] = new ContactPerson([
+                        'first_name' => $customerContact->getName(),
+                        'email_address' => $customerContact->getEmail(),
+                        'include_in_emails' => true,
+                    ]);
+                }
+            }
+        } else {
+            Log::error("Unable to find Contact Group `{$roleStr}` in our local database, please make sure it exists");
         }
 
-//        $c->isReseller();
         return new Contact([
             'contact_number' => $syncAction->getMemberId(),
+            'account_number' => $memberAsn,
             'is_customer' => true,
             'is_supplier' => false,
             'name' => $c->getName(),
             'first_name' => $nullOr($c->getBillingDetails()->getBillingContactName()),
-            'last_name' => $memberAsn,
             'addresses' => $addresses ? $addresses : null,
             'email_address' => $nullOr($c->getBillingDetails()->getBillingEmail()),
+//            'website' => $nullOr($c->getCorpwww()), // this is read only
             'phones' => $phones ? $phones : null,
+            'tax_number' => $nullOr($c->getBillingDetails()->getVatNumber()),
+            'contact_persons' => $persons ? $persons : null
         ]);
     }
 
@@ -309,7 +349,7 @@ class XeroSync
         if ($toUpdate) {
             Log::info("Updating contact groups");
             $result = $this->xero->createContactGroupContacts($this->xeroCredentials->getTenantId(), $groupToAddTo->getContactGroupId(), $toUpdate);
-            print_r($result);
+//            print_r($result);
         }
 
     }
