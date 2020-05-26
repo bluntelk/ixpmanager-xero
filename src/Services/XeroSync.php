@@ -4,6 +4,7 @@ namespace bluntelk\IxpManagerXero\Services;
 
 use bluntelk\IxpManagerXero\Sync\SyncAction;
 use Entities\Customer;
+use Illuminate\Support\Facades\Log;
 use Psr\Log\LoggerInterface;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
@@ -23,18 +24,13 @@ class XeroSync
      * @var OauthCredentialManager
      */
     private $xeroCredentials;
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
 
     protected $requiredScopes = [ 'accounting.contacts', 'accounting.settings.read' ];
 
 
-    public function __construct(LoggerInterface $logger, OauthCredentialManager $xeroCredentials, AccountingApi $xero) {
+    public function __construct(OauthCredentialManager $xeroCredentials, AccountingApi $xero) {
         $this->xero = $xero;
         $this->xeroCredentials = $xeroCredentials;
-        $this->logger = $logger;
     }
 
 
@@ -65,11 +61,11 @@ class XeroSync
      */
     protected function listXeroAccountingContacts(): Contacts
     {
-        $this->logger->info("Asking Xero for Contacts");
+        Log::info("Asking Xero for Contacts");
         /** @var Contacts $list */
         $list = $this->xero->getContacts($this->xeroCredentials->getTenantId());
         $n = count($list);
-        $this->logger->info("Fetched $n records from Xero");
+        Log::info("Fetched $n records from Xero");
         return $list;
     }
 
@@ -79,7 +75,7 @@ class XeroSync
     public function prepareSync(): array
     {
         if (!$this->isXeroConfigValid()) {
-            $this->logger->error("Your Xero Integration Settings are Invalid.");
+            Log::error("Your Xero Integration Settings are Invalid.");
             return [];
         }
 
@@ -87,9 +83,13 @@ class XeroSync
 
         $actions = [];
         foreach ($this->listIxpCustomers() as $customer) {
+            if (!in_array($customer->getType(), config('ixpxero.sync_customer_types'))) {
+                Log::debug("Ignoring Customer ({$customer->getName()} - Type: {$customer->getTypeText()})");
+                continue;
+            }
             // match based on ASN
             $memberAsn = 'AS' . $customer->getAutsys();
-            $this->logger->debug("Customer {$memberAsn}");
+            Log::debug("Customer {$memberAsn}");
             $found = false;
             foreach ($accountingContacts as $contact) {
                 if ($contact->getAccountNumber() == $memberAsn) {
@@ -122,11 +122,11 @@ class XeroSync
         $contacts = new Contacts();
         $syncActions = $this->prepareSync();
         foreach ($syncActions as $syncAction) {
-            $this->logger->info("About to perform sync action: {$syncAction}");
+            Log::info("About to perform sync action: {$syncAction}");
             $c = $syncAction->customer;
 
             if (!$c->getAutsys()) {
-                $this->logger->warning("Action {$syncAction} cannot be performed, Member does not have an ASN to sync against");
+                Log::warning("Action {$syncAction} cannot be performed, Member does not have an ASN to sync against");
                 continue;
             }
 
@@ -171,10 +171,10 @@ class XeroSync
 
                     $contact = new Contact([
                         'contact_number' => $syncAction->getMemberId(),
-                        'account_number' => $memberAsn,
                         'is_customer' => true,
                         'name' => $c->getName(),
                         'first_name' => $nullOr($c->getBillingDetails()->getBillingContactName()),
+                        'last_name' => $memberAsn,
                         'addresses' => $addresses ? $addresses : null,
                         'email_address' => $nullOr($c->getBillingDetails()->getBillingEmail()),
                         'phones' => $phones ? $phones : null,
@@ -185,13 +185,13 @@ class XeroSync
                         $contacts[] = $contact;
                     } else {
                         foreach ($contact->listInvalidProperties() as $invalidProperty) {
-                            $this->logger->error("Unable to perform {$syncAction}: $invalidProperty");
+                            Log::error("Unable to perform {$syncAction}: $invalidProperty");
                         }
                     }
 //                    echo "{$contact}"; die;
                     break;
                 case SyncAction::ACTION_DO_NOTHING:
-                    $this->logger->debug("Successfully did nothing");
+                    Log::debug("Successfully did nothing");
                     break;
             }
 
@@ -199,14 +199,14 @@ class XeroSync
 
 //        print_r($contacts);
         $n = count($contacts);
-        $this->logger->info("About to send $n contacts to Xero");
+        Log::info("About to send $n contacts to Xero");
         try {
             /** @var Contact[] $retContacts */
             $retContacts = $this->xero->updateOrCreateContacts($this->xeroCredentials->getTenantId(), $contacts);
             foreach ($retContacts as $retContact) {
                 if ($retContact->getHasValidationErrors()) {
                     foreach ($retContact->getValidationErrors() as $error) {
-                        $this->logger->error($error->getMessage());
+                        Log::error($error->getMessage());
                     }
                     foreach ($syncActions as $syncAction) {
                         if ($syncAction->getMemberId() == $retContact->getContactNumber()) {
@@ -221,15 +221,15 @@ class XeroSync
             }
             //print_r($result);
         } catch(\XeroAPI\XeroPHP\ApiException $e) {
-            $this->logger->error($e->getMessage());
-            $this->logger->error($e->getResponseBody());
+            Log::error($e->getMessage());
+            Log::error($e->getResponseBody());
 
             /** @var \XeroAPI\XeroPHP\Models\Accounting\Error $obj */
             $obj = $e->getResponseObject();
             if ($obj instanceof Error) {
                 foreach ($obj->getElements() as $item) {
                     foreach ($item->getValidationErrors() as $err) {
-                        $this->logger->error($err->getMessage());
+                        Log::error($err->getMessage());
                     }
                 }
             }

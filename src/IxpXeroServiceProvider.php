@@ -6,8 +6,11 @@ use bluntelk\IxpManagerXero\Console\Commands\SyncCommand;
 use bluntelk\IxpManagerXero\Controllers\XeroController;
 use bluntelk\IxpManagerXero\Services\XeroSync;
 use Illuminate\Foundation\Application;
+use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Log\Logger;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use Symfony\Component\Console\Output\ConsoleOutput;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
 
@@ -25,7 +28,6 @@ class IxpXeroServiceProvider extends ServiceProvider
 
         $this->app->bind( XeroSync::class, function( Application $app ) {
             return new XeroSync(
-                $app->make( Logger::class ),
                 $app->make( OauthCredentialManager::class ),
                 $app->make( AccountingApi::class )
             );
