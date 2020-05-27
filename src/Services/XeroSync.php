@@ -173,7 +173,9 @@ class XeroSync
                     foreach ($syncActions as $syncAction) {
                         if ($syncAction->getMemberId() == $retContact->getContactNumber()) {
                             $syncAction->failed = true;
-                            $syncAction->errors[] = $retContact->getValidationErrors();
+                            foreach ($retContact->getValidationErrors() as $error) {
+                                $syncAction->errors[] = $error->getMessage();
+                            }
                             break;
                         }
                     }
@@ -265,8 +267,12 @@ class XeroSync
         $roleStr = config('ixpxero.billing_contact_role');
         /** @var \Entities\ContactGroup $role */
         $role = \D2EM::getRepository(\Entities\ContactGroup::class)->findOneBy(['name' => $roleStr]);
+        /**
+         * Xero will throw an if we try to add contacts when the primary contact does not have an email address
+         */
+        $hasPrimaryEmail = (bool)$c->getBillingDetails()->getBillingEmail();
 
-        if ($role) {
+        if ($role && $hasPrimaryEmail) {
             foreach ($c->getContacts() as $customerContact) {
                 Log::debug("Finding contacts to add for role {$roleStr} (id={$role->getId()})");
                 $hasGroup = $customerContact->getGroups()->exists(function($key, $element) use ($role) {
@@ -281,7 +287,9 @@ class XeroSync
                 }
             }
         } else {
-            Log::error("Unable to find Contact Group `{$roleStr}` in our local database, please make sure it exists");
+            if (!$role) {
+                Log::error("Unable to find Contact Group `{$roleStr}` in our local database, please make sure it exists");
+            }
         }
 
         return new Contact([
