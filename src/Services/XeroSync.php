@@ -292,16 +292,15 @@ class XeroSync
             }
         }
 
+        $companyName = $nullOr($c->getRegistrationDetails()->getRegisteredName()) ?? $c->getName();
+
         return new Contact([
             'contact_number' => $syncAction->getMemberId(),
             'account_number' => $memberAsn,
-            'is_customer' => true,
-            'is_supplier' => false,
-            'name' => $c->getName(),
+            'name' => $companyName,
             'first_name' => $nullOr($c->getBillingDetails()->getBillingContactName()),
             'addresses' => $addresses ? $addresses : null,
             'email_address' => $nullOr($c->getBillingDetails()->getBillingEmail()),
-//            'website' => $nullOr($c->getCorpwww()), // this is read only
             'phones' => $phones ? $phones : null,
             'tax_number' => $nullOr($c->getBillingDetails()->getVatNumber()),
             'contact_persons' => $persons ? $persons : null
