@@ -3,6 +3,8 @@
 namespace bluntelk\IxpManagerXero\Sync;
 
 use Entities\Customer;
+use Illuminate\Support\Facades\Event;
+use IXP\Events\Customer\BillingDetailsChanged;
 
 class SyncAction
 {
@@ -49,10 +51,5 @@ class SyncAction
             default:
                 return "an unknown action with member `{$this->customer->getName()}`";
         }
-    }
-
-    public function getMemberId(): string
-    {
-        return 'MemberId='.$this->customer->getId();
     }
 }

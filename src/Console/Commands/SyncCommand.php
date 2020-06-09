@@ -3,6 +3,7 @@
 namespace bluntelk\IxpManagerXero\Console\Commands;
 
 use bluntelk\IxpManagerXero\Services\XeroSync;
+use Entities\Customer;
 use Illuminate\Console\Command;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
@@ -11,7 +12,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class SyncCommand extends Command
 {
-    protected $signature = 'xero:sync';
+    protected $signature = 'xero:sync {customer_id?}';
 
     protected $description = 'Sync all members into Xero';
 
@@ -43,7 +44,6 @@ class SyncCommand extends Command
                     break;
             }
         });
-
     }
 
     public function handle(XeroSync $xeroSync)
@@ -54,8 +54,12 @@ class SyncCommand extends Command
             $this->error("Your Xero Config is invalid. Please follow the setup steps in the README.md", OutputInterface::VERBOSITY_QUIET);
             return 1;
         }
+        if ($this->argument('customer_id') && $customer = \D2EM::getRepository(Customer::class )->find($this->argument('customer_id'))) {
+            $actions = $xeroSync->performSyncOne($customer);
+        } else {
+            $actions = $xeroSync->performSyncAll();
+        }
 
-        $actions = $xeroSync->performSync();
 
         if ($this->verbosity >= OutputInterface::VERBOSITY_NORMAL) {
             $rows = [];

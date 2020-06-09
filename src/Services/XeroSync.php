@@ -61,6 +61,21 @@ class XeroSync
         return $customerRepo->getCurrentActive();
     }
 
+    protected function getXeroAccountingContact(Customer $customer): ?Contact
+    {
+        Log::info("Asking Xero for Contacts");
+        $memberId = $this->getMemberId($customer);
+
+        /** @var Contacts $list */
+        $list = $this->xero->getContacts($this->xeroCredentials->getTenantId(), null, "ContactNumber==\"{$memberId}\"");
+        $n = count($list);
+        Log::info("Fetched $n records from Xero");
+        if ($n == 1) {
+            return $list[0];
+        }
+        return null;
+    }
+
     /**
      * @return Contact[]|Contacts
      */
@@ -123,11 +138,30 @@ class XeroSync
 
         return $actions;
     }
+    protected function getMemberId(Customer $customer):string
+    {
+        return 'MemberId='.$customer->getId();
+    }
 
-    public function performSync()
+    public function performSyncAll()
+    {
+        return $this->performSync($this->prepareSync());
+    }
+
+    public function performSyncOne(Customer $customer)
+    {
+        $accountingContact = $this->getXeroAccountingContact($customer);
+        $syncAction = new SyncAction(SyncAction::ACTION_UPDATE, $customer, $accountingContact);
+        return $this->performSync([$syncAction]);
+    }
+
+    /**
+     * @param SyncAction[] $syncActions
+     * @return SyncAction[]
+     */
+    public function performSync(array $syncActions)
     {
         $contacts = new Contacts();
-        $syncActions = $this->prepareSync();
         foreach ($syncActions as $syncAction) {
             Log::info("About to perform sync action: {$syncAction}");
 
@@ -171,7 +205,7 @@ class XeroSync
                         Log::error($error->getMessage());
                     }
                     foreach ($syncActions as $syncAction) {
-                        if ($syncAction->getMemberId() == $retContact->getContactNumber()) {
+                        if ($this->getMemberId($syncAction->customer) == $retContact->getContactNumber()) {
                             $syncAction->failed = true;
                             foreach ($retContact->getValidationErrors() as $error) {
                                 $syncAction->errors[] = $error->getMessage();
@@ -295,7 +329,7 @@ class XeroSync
         $companyName = $nullOr($c->getRegistrationDetails()->getRegisteredName()) ?? $c->getName();
 
         return new Contact([
-            'contact_number' => $syncAction->getMemberId(),
+            'contact_number' => $this->getMemberId($c),
             'account_number' => $memberAsn,
             'name' => $companyName,
             'first_name' => $nullOr($c->getBillingDetails()->getBillingContactName()),

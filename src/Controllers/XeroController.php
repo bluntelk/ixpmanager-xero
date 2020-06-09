@@ -55,7 +55,7 @@ class XeroController extends Controller
         try {
             if ('yes' == $request->get('perform')) {
                 $performing = true;
-                $actions = $xeroSync->performSync();
+                $actions = $xeroSync->performSyncAll();
             } else {
                 $actions = $xeroSync->prepareSync();
             }

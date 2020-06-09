@@ -10,6 +10,7 @@ use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Log\Logger;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
+use IXP\Events\Customer\BillingDetailsChanged;
 use Symfony\Component\Console\Output\ConsoleOutput;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
@@ -52,6 +53,11 @@ class IxpXeroServiceProvider extends ServiceProvider
             $this->commands( [
                 SyncCommand::class,
             ] );
+        } else {
+            Event::listen(BillingDetailsChanged::class, function(BillingDetailsChanged $event) {
+                $customer = $event->cbd->getCustomer();
+                app(XeroSync::class)->performSyncOne($customer);
+            });
         }
     }
 }
