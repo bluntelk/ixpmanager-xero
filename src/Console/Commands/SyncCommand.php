@@ -18,22 +18,28 @@ class SyncCommand extends Command
     public function __construct() {
         parent::__construct();
         Event::listen(MessageLogged::class, function(MessageLogged $event) {
+            $output = $this->getOutput();
+            if (!$output) {
+                // no output? no problem - let's just be quiet
+                return;
+            }
+
             switch($event->level) {
                 case LogLevel::CRITICAL:
                 case LogLevel::ERROR:
                 case LogLevel::ALERT:
                 case LogLevel::EMERGENCY:
-                    $this->getOutput()->error($event->message);
+                    $output->error($event->message);
                     break;
                 case LogLevel::WARNING:
-                    $this->getOutput()->warning($event->message);
+                    $output->warning($event->message);
                     break;
                 case LogLevel::DEBUG:
-                    $this->getOutput()->writeln($event->message, OutputInterface::VERBOSITY_VERY_VERBOSE);
+                    $output->writeln($event->message, OutputInterface::VERBOSITY_VERY_VERBOSE);
                     break;
                 case LogLevel::INFO:
                 default:
-                    $this->getOutput()->writeln($event->message, OutputInterface::VERBOSITY_VERBOSE);
+                    $output->writeln($event->message, OutputInterface::VERBOSITY_VERBOSE);
                     break;
             }
         });
