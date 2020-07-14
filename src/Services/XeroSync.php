@@ -5,6 +5,7 @@ namespace bluntelk\IxpManagerXero\Services;
 use bluntelk\IxpManagerXero\Sync\SyncAction;
 use Entities\Customer;
 use Illuminate\Support\Facades\Log;
+use IXP\Exceptions\GeneralException;
 use Psr\Log\LoggerInterface;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
@@ -117,7 +118,11 @@ class XeroSync
         $actions = [];
         foreach ($this->listIxpCustomers() as $customer) {
             if (!in_array($customer->getType(), config('ixpxero.sync_customer_types'))) {
-                Log::debug("Ignoring Customer ({$customer->getName()} - Type: {$customer->getTypeText()})");
+                try {
+                    Log::debug("Ignoring Customer ({$customer->getName()} - Type: {$customer->getTypeText()})");
+                } catch(GeneralException $e) {
+                    Log::debug("Ignoring Customer ({$customer->getName()} - Type: Unknown)");
+                }
                 continue;
             }
             // match based on ASN
