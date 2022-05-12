@@ -3,9 +3,9 @@
     "description": "IXP Manager Integration with Xero",
     "type": "library",
     "require": {
-        "laravel/framework": "^6.0",
-        "foil/foil": "~0.6",
-        "webfox/laravel-xero-oauth2": "~1.2"
+        "laravel/framework": "^8",
+        "foil/foil": "^0.6",
+        "webfox/laravel-xero-oauth2": "^3"
     },
     "license": "MIT",
     "authors": [

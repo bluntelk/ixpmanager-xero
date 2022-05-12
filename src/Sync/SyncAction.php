@@ -2,9 +2,10 @@
 
 namespace bluntelk\IxpManagerXero\Sync;
 
-use Entities\Customer;
+use Ixp\Models\Customer;
 use Illuminate\Support\Facades\Event;
 use IXP\Events\Customer\BillingDetailsChanged;
+use XeroAPI\XeroPHP\Models\Accounting\Contact;
 
 class SyncAction
 {
@@ -18,20 +19,26 @@ class SyncAction
      */
     public $action;
 
-    /** @var \Entities\Customer */
-    public $customer;
+    /** @var \Ixp\Models\Customer */
+    public Customer $customer;
 
 
     public $accountingContact;
     /**
      * @var bool
      */
-    public $performed;
+    public bool $performed = false;
 
     public $errors = [];
     public $failed = false;
 
-    public function __construct(string $action, Customer $customer, $accountingContact, bool $performed = false)
+    /**
+     * @param string $action
+     * @param Customer $customer
+     * @param Contact|null $accountingContact
+     * @param bool $performed
+     */
+    public function __construct(string $action, Customer $customer, ?Contact $accountingContact, bool $performed = false)
     {
         $this->customer = $customer;
         $this->accountingContact = $accountingContact;

@@ -3,7 +3,7 @@
 namespace bluntelk\IxpManagerXero\Console\Commands;
 
 use bluntelk\IxpManagerXero\Services\XeroSync;
-use Entities\Customer;
+use IXP\Models\Customer;
 use Illuminate\Console\Command;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\Event;
@@ -54,7 +54,7 @@ class SyncCommand extends Command
             $this->error("Your Xero Config is invalid. Please follow the setup steps in the README.md", OutputInterface::VERBOSITY_QUIET);
             return 1;
         }
-        if ($this->argument('customer_id') && $customer = \D2EM::getRepository(Customer::class )->find($this->argument('customer_id'))) {
+        if ($this->argument('customer_id') && $customer = Customer::find($this->argument('customer_id'))) {
             $actions = $xeroSync->performSyncOne($customer);
         } else {
             $actions = $xeroSync->performSyncAll();

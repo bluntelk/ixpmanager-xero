@@ -5,9 +5,9 @@ return [
      * Only sync contacts of these types
      */
     'sync_customer_types' => [
-        \Entities\Customer::TYPE_FULL,
-        \Entities\Customer::TYPE_ASSOCIATE,
-        \Entities\Customer::TYPE_PROBONO,
+        \IXP\Models\Customer::TYPE_FULL,
+        \IXP\Models\Customer::TYPE_ASSOCIATE,
+        \IXP\Models\Customer::TYPE_PROBONO,
     ],
     /**
      * Add all of our IXP Customers to this Xero Contact Group
