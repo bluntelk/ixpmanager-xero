@@ -50,13 +50,13 @@ class SyncAction
     {
         switch($this->action) {
             case SyncAction::ACTION_CREATE:
-                return "create IXP Member `{$this->customer->getName()}` in Xero";
+                return "create IXP Member `{$this->customer->name}` in Xero";
             case SyncAction::ACTION_UPDATE:
-                return "update IXP Member `{$this->customer->getName()}` details against Xero customer `{$this->customer->getName()}`";
+                return "update IXP Member `{$this->customer->name}` details against Xero customer `{$this->customer->name}`";
             case SyncAction::ACTION_DO_NOTHING:
-                return "absolutely nothing with member `{$this->customer->getName()}`";
+                return "absolutely nothing with member `{$this->customer->name}`";
             default:
-                return "an unknown action with member `{$this->customer->getName()}`";
+                return "an unknown action with member `{$this->customer->name}`";
         }
     }
 }

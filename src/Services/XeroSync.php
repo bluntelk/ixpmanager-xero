@@ -48,9 +48,9 @@ class XeroSync
     /**
      * @return Customer[]
      */
-    protected function listIxpCustomers(): array
+    protected function listIxpCustomers(): iterable
     {
-        return Customer::active();
+        return Customer::active()->get();
     }
 
     protected function getXeroAccountingContact( Customer $customer ): ?Contact
@@ -108,16 +108,16 @@ class XeroSync
 
         $actions = [];
         foreach( $this->listIxpCustomers() as $customer ) {
-            if( !in_array( $customer->getType(), config( 'ixpxero.sync_customer_types' ) ) ) {
+            if( !in_array( $customer->type, config( 'ixpxero.sync_customer_types' ) ) ) {
                 try {
-                    Log::debug( "Ignoring Customer ({$customer->getName()} - Type: {$customer->getTypeText()})" );
+                    Log::debug( "Ignoring Customer ({$customer->name} - Type: {$customer->givenType($customer->type)})" );
                 } catch( GeneralException $e ) {
-                    Log::debug( "Ignoring Customer ({$customer->getName()} - Type: Unknown)" );
+                    Log::debug( "Ignoring Customer ({$customer->name} - Type: Unknown)" );
                 }
                 continue;
             }
             // match based on ASN
-            $memberAsn = 'AS' . $customer->getAutsys();
+            $memberAsn = 'AS' . $customer->autsys;
             Log::debug( "Customer {$memberAsn}" );
             $found = false;
             foreach( $accountingContacts as $contact ) {
@@ -137,7 +137,7 @@ class XeroSync
 
     protected function getMemberId( Customer $customer ): string
     {
-        return 'MemberId=' . $customer->getId();
+        return 'MemberId=' . $customer->id;
     }
 
     public function performSyncAll()
@@ -247,32 +247,33 @@ class XeroSync
             return $arr;
         };
 
+        /** @var Customer $c */
         $c = $syncAction->customer;
-        $memberAsn = 'AS' . $c->getAutsys();
+        $memberAsn = 'AS' . $c->autsys;
         if( isset( $this->seenAsns[ $memberAsn ] ) ) {
-            $memberAsn .= ",id={$c->getId()}";
+            $memberAsn .= ",id={$c->id}";
         }
         $this->seenAsns[ $memberAsn ] = true;
 
         $address_registration = new Address( $trimNull( [
             'address_type'  => Address::ADDRESS_TYPE_POBOX,
-            'address_line1' => $nullOr( $c->getRegistrationDetails()->getAddress1() ),
-            'address_line2' => $nullOr( $c->getRegistrationDetails()->getAddress2() ),
-            'address_line3' => $nullOr( $c->getRegistrationDetails()->getAddress3() ),
-            'city'          => $nullOr( $c->getRegistrationDetails()->getTownCity() ),
-            'postal_code'   => $nullOr( $c->getRegistrationDetails()->getPostcode() ),
-            'country'       => $nullOr( $c->getRegistrationDetails()->getCountry() ),
+            'address_line1' => $nullOr( $c->companyRegisteredDetail->address1 ),
+            'address_line2' => $nullOr( $c->companyRegisteredDetail->address2 ),
+            'address_line3' => $nullOr( $c->companyRegisteredDetail->address3 ),
+            'city'          => $nullOr( $c->companyRegisteredDetail->townCity ),
+            'postal_code'   => $nullOr( $c->companyRegisteredDetail->postcode ),
+            'country'       => $nullOr( $c->companyRegisteredDetail->country ),
         ] ) );
 
         $address_billing = new Address( $trimNull( [
             'address_type'  => Address::ADDRESS_TYPE_STREET,
-            'address_line1' => $nullOr( $c->getBillingDetails()->getBillingAddress1() ),
-            'address_line2' => $nullOr( $c->getBillingDetails()->getBillingAddress2() ),
-            'address_line3' => $nullOr( $c->getBillingDetails()->getBillingAddress3() ),
-            'city'          => $nullOr( $c->getBillingDetails()->getBillingTownCity() ),
-            'postal_code'   => $nullOr( $c->getBillingDetails()->getBillingPostcode() ),
-            'country'       => $nullOr( $c->getBillingDetails()->getBillingCountryName() ),
-            'attention_to'  => $nullOr( $c->getBillingDetails()->getBillingContactName() ),
+            'address_line1' => $nullOr( $c->companyBillingDetail->billingAddress1 ),
+            'address_line2' => $nullOr( $c->companyBillingDetail->billingAddress2 ),
+            'address_line3' => $nullOr( $c->companyBillingDetail->billingAddress3 ),
+            'city'          => $nullOr( $c->companyBillingDetail->billingTownCity ),
+            'postal_code'   => $nullOr( $c->companyBillingDetail->billingPostcode ),
+            'country'       => $nullOr( $c->companyBillingDetail->billingCountry ),
+            'attention_to'  => $nullOr( $c->companyBillingDetail->billingContactName ),
         ] ) );
         $addresses = [];
         if( $address_registration->valid() && "{}" != "{$address_registration}" ) {
@@ -297,22 +298,22 @@ class XeroSync
         $persons = [];
         $roleStr = config( 'ixpxero.billing_contact_role' );
         /** @var \IXP\Models\ContactGroup $role */
-        $role = IxpContactGroup::where('name', $roleStr);
+        $role = IxpContactGroup::where('name', $roleStr)->first();
         /**
          * Xero will throw an if we try to add contacts when the primary contact does not have an email address
          */
-        $hasPrimaryEmail = (bool)$c->getBillingDetails()->getBillingEmail();
+        $hasPrimaryEmail = (bool)$c->companyBillingDetail->billingEmail;
 
         if( $role && $hasPrimaryEmail ) {
-            foreach( $c->getContacts() as $customerContact ) {
-                Log::debug( "Finding contacts to add for role {$roleStr} (id={$role->getId()})" );
-                $hasGroup = $customerContact->getGroups()->exists( function( $key, $element ) use ( $role ) {
+            foreach( $c->contacts as $customerContact ) {
+                Log::debug( "Finding contacts to add for role {$roleStr} (id={$role->id})" );
+                $hasGroup = $customerContact->contactGroups()->exists( function( $key, $element ) use ( $role ) {
                     return $role === $element;
                 } );
                 if( $hasGroup ) {
                     $persons[] = new ContactPerson( [
-                        'first_name'        => $customerContact->getName(),
-                        'email_address'     => $customerContact->getEmail(),
+                        'first_name'        => $customerContact->name,
+                        'email_address'     => $customerContact->email,
                         'include_in_emails' => true,
                     ] );
                 }
@@ -323,17 +324,17 @@ class XeroSync
             }
         }
 
-        $companyName = $nullOr( $c->getRegistrationDetails()->getRegisteredName() ) ?? $c->getName();
+        $companyName = $nullOr( $c->companyRegisteredDetail->registeredName ) ?? $c->name;
 
         return new Contact( [
             'contact_number'  => $this->getMemberId( $c ),
             'account_number'  => $memberAsn,
             'name'            => $companyName,
-            'first_name'      => $nullOr( $c->getBillingDetails()->getBillingContactName() ),
+            'first_name'      => $nullOr( $c->companyBillingDetail->billingContactName ),
             'addresses'       => $addresses ? $addresses : null,
-            'email_address'   => $nullOr( $c->getBillingDetails()->getBillingEmail() ),
+            'email_address'   => $nullOr( $c->companyBillingDetail->billingEmail ),
             'phones'          => $phones ? $phones : null,
-            'tax_number'      => $nullOr( $c->getBillingDetails()->getVatNumber() ),
+            'tax_number'      => $nullOr( $c->companyBillingDetail->vatNumber ),
             'contact_persons' => $persons ? $persons : null,
         ] );
     }

@@ -44,8 +44,8 @@ class IxpXeroServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom( __DIR__ . '/../database/migrations' );
         $this->loadViewsFrom( __DIR__ . '/../resources/views', 'ixpxero' );
         $this->publishes( [
-            __DIR__ . '/../resources/views'           => resource_path( 'views/vendor/ixpxero' ),
-            __DIR__ . '/../config/ixpxero-config.php' => config_path( 'ixpxero-config.php' ),
+            __DIR__ . '/../resources/views'    => resource_path( 'views/vendor/ixpxero' ),
+            __DIR__ . '/../config/ixpxero.php' => config_path( 'ixpxero-config.php' ),
         ] );
 
         if( $this->app->runningInConsole() ) {

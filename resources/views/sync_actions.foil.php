@@ -42,7 +42,7 @@ $this->layout( 'layouts/ixpv4' );
         <tbody>
         <?php foreach( $t->actions as $action ): ?>
             <tr>
-                <td><?= $action->customer->getName() ?></td>
+                <td><?= $action->customer->name ?></td>
                 <td><?= $action->action ?></td>
                 <td><?= $action->performed ? 'Yes' : 'No' ?></td>
                 <td><?= $action->performed ? ($action->failed ? 'No' : 'Yes') : '' ?></td>
