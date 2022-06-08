@@ -54,7 +54,7 @@ class IxpXeroServiceProvider extends ServiceProvider
             ] );
         } else {
             Event::listen( BillingDetailsChanged::class, function( BillingDetailsChanged $event ) {
-                $customer = $event->cbd->getCustomer();
+                $customer = $event->cbd->customer;
                 try {
                     app( XeroSync::class )->performSyncOne( $customer );
                 } catch( \Exception $e ) {
