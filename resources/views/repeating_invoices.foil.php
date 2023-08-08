@@ -19,6 +19,7 @@ $this->layout( 'layouts/ixpv4' );
     <thead>
     <tr>
         <th>Contact Name</th>
+        <th>MemberID</th>
         <th>Sub Total</th>
         <th>Tax</th>
         <th>Total</th>
@@ -28,6 +29,7 @@ $this->layout( 'layouts/ixpv4' );
     <?php foreach($t->invoices as /** @var RepeatingInvoice $invoice*/ $invoice): ?>
     <tr>
         <td><?= $invoice->getContact()?->getName() ?></td>
+        <td><?= $invoice->getContact()?->getContactNumber() ?></td>
         <td class="text-right mono"><?= number_format($invoice->getSubTotal(), 2) ?></td>
         <td class="text-right mono"><?= number_format($invoice->getTotalTax(), 2) ?></td>
         <td class="text-right mono"><?= number_format($invoice->getTotal(), 2) ?></td>

@@ -242,7 +242,7 @@ class XeroSync
     private function makeXeroContact( SyncAction $syncAction ): Contact
     {
         $nullOr = function( $value ) {
-            return $value ? $value : null;
+            return $value ?: null;
         };
         $trimNull = function( array $arr ) {
             foreach( $arr as $k => $v ) {
@@ -337,11 +337,11 @@ class XeroSync
             'account_number'  => $memberAsn,
             'name'            => $companyName,
             'first_name'      => $nullOr( $c->companyBillingDetail->billingContactName ),
-            'addresses'       => $addresses ? $addresses : null,
+            'addresses'       => $addresses ?: null,
             'email_address'   => $nullOr( $c->companyBillingDetail->billingEmail ),
-            'phones'          => $phones ? $phones : null,
+            'phones'          => $phones ?: null,
             'tax_number'      => $nullOr( $c->companyBillingDetail->vatNumber ),
-            'contact_persons' => $persons ? $persons : null,
+            'contact_persons' => $persons ?: null,
         ] );
     }
 
