@@ -19,6 +19,8 @@ use XeroAPI\XeroPHP\Models\Accounting\Error;
 
 class XeroSync
 {
+    use CustomerTrait;
+
     private AccountingApi $xero;
     private OauthCredentialManager $xeroCredentials;
 
@@ -45,14 +47,6 @@ class XeroSync
         }
 
         return true;
-    }
-
-    /**
-     * @return Customer[]
-     */
-    protected function listIxpCustomers(): iterable
-    {
-        return Customer::active()->get();
     }
 
     protected function getXeroAccountingContact( Customer $customer ): ?Contact
@@ -135,11 +129,6 @@ class XeroSync
         }
 
         return $actions;
-    }
-
-    protected function getMemberId( Customer $customer ): string
-    {
-        return 'MemberId=' . $customer->id;
     }
 
     public function performSyncAll()

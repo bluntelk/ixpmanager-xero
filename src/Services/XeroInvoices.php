@@ -7,6 +7,8 @@ use XeroAPI\XeroPHP\Api\AccountingApi;
 
 class XeroInvoices
 {
+    use CustomerTrait;
+
     private OauthCredentialManager $xeroCredentials;
     private AccountingApi $accountingApi;
 

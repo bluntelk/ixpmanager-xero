@@ -82,6 +82,7 @@ class XeroController extends Controller
     {
         return view( 'ixpxero::repeating_invoices', [
             'invoices' => $invoices->fetchRepeatingInvoices(),
+            'customers' => $invoices->listIxpCustomers(),
         ] );
     }
 }
