@@ -55,15 +55,23 @@ $this->layout( 'layouts/ixpv4' );
 <?php elseif( $t->connected ): ?>
     <h1>You are connected to Xero</h1>
     <p><?= $t->organisationName ?> via <?= $t->username ?></p>
-<div class="btn-group">
-    <a href="<?= route( 'xero.auth.authorize' ) ?>" class="btn btn-primary btn-large mt-4">
-        Reconnect to Xero
-    </a>
-    <a href="<?= route( 'xero.sync' ) ?>" class="btn btn-secondary btn-large mt-4">
-        View Sync Actions
-    </a>
+    <h2>Administration Actions</h2>
+    <div class="btn-group mb-4">
+        <a href="<?= route( 'xero.auth.authorize' ) ?>" class="btn btn-primary btn-large mt-4">
+            Reconnect to Xero
+        </a>
+    </div>
 
-</div>
+    <h2>Sync Actions</h2>
+    <div class="btn-group mb-4">
+        <a href="<?= route( 'xero.sync' ) ?>" class="btn btn-secondary btn-large mt-4">
+            View Sync Actions
+        </a>
+        <a href="<?= route( 'xero.repeating.invoices' ) ?>" class="btn btn-secondary btn-large mt-4">
+            Invoice Thingy
+        </a>
+    </div>
+
 <?php else: ?>
     <h1>You are not connected to Xero</h1>
     <a href="<?= route( 'xero.auth.authorize' ) ?>" class="btn btn-primary btn-large mt-4">

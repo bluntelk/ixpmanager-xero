@@ -2,31 +2,33 @@
 
 namespace bluntelk\IxpManagerXero\Services;
 
-use Ixp\Models\Customer;
 use bluntelk\IxpManagerXero\Sync\SyncAction;
 use Illuminate\Support\Facades\Log;
 use IXP\Exceptions\GeneralException;
-use Psr\Log\LoggerInterface;
+use IXP\Models\ContactGroup as IxpContactGroup;
+use Ixp\Models\Customer;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
 use XeroAPI\XeroPHP\Models\Accounting\Address;
+use XeroAPI\XeroPHP\Models\Accounting\Contact;
 use XeroAPI\XeroPHP\Models\Accounting\ContactGroup;
 use XeroAPI\XeroPHP\Models\Accounting\ContactGroups;
 use XeroAPI\XeroPHP\Models\Accounting\ContactPerson;
 use XeroAPI\XeroPHP\Models\Accounting\Contacts;
-use XeroAPI\XeroPHP\Models\Accounting\Contact;
 use XeroAPI\XeroPHP\Models\Accounting\Error;
-use XeroAPI\XeroPHP\Models\Accounting\Phone;
-use \IXP\Models\ContactGroup as IxpContactGroup;
 
 class XeroSync
 {
     private AccountingApi $xero;
     private OauthCredentialManager $xeroCredentials;
 
-    private $seenAsns = [];
+    private array $seenAsns = [];
 
-    protected $requiredScopes = [ 'accounting.contacts', 'accounting.settings.read' ];
+    protected array $requiredScopes = [
+        'accounting.contacts',
+        'accounting.settings.read',
+        'accounting.transactions.read'
+    ];
 
     public function __construct( OauthCredentialManager $xeroCredentials, AccountingApi $xero )
     {
@@ -156,8 +158,12 @@ class XeroSync
      * @param SyncAction[] $syncActions
      * @return SyncAction[]
      */
-    public function performSync( array $syncActions )
+    public function performSync( array $syncActions ): array
     {
+        if( !$syncActions ) {
+            Log::warning( "No Sync Actions, we do not have anyone added." );
+            return [];
+        }
         $contacts = new Contacts();
         foreach( $syncActions as $syncAction ) {
             Log::info( "About to perform sync action: {$syncAction}" );
@@ -298,7 +304,7 @@ class XeroSync
         $persons = [];
         $roleStr = config( 'ixpxero.billing_contact_role' );
         /** @var \IXP\Models\ContactGroup $role */
-        $role = IxpContactGroup::where('name', $roleStr)->first();
+        $role = IxpContactGroup::where( 'name', $roleStr )->first();
         /**
          * Xero will throw an if we try to add contacts when the primary contact does not have an email address
          */

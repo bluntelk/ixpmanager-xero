@@ -2,21 +2,25 @@
 
 namespace bluntelk\IxpManagerXero\Controllers;
 
+use bluntelk\IxpManagerXero\Services\XeroInvoices;
 use bluntelk\IxpManagerXero\Services\XeroSync;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 use IXP\Http\Controllers\Controller;
 use Webfox\Xero\OauthCredentialManager;
+use XeroAPI\XeroPHP\Api\AccountingApi;
 
 class XeroController extends Controller
 {
-    protected $requiredScopes = [ 'accounting.contacts', 'accounting.settings.read' ];
 
     public function __construct()
     {
         $this->middleware( 'auth' );
     }
 
-    public function index( Request $request, OauthCredentialManager $xeroCredentials,  XeroSync $xeroSync )
+    public function index( Request $request, OauthCredentialManager $xeroCredentials, XeroSync $xeroSync ): Factory|View|Application
     {
         try {
             // Check if we've got any stored credentials
@@ -26,7 +30,7 @@ class XeroController extends Controller
                  * If we were sure we already had some stored credentials then we could just resolve this through the controller
                  * But since we use this route for the initial authentication we cannot be sure!
                  */
-                $xero = resolve( \XeroAPI\XeroPHP\Api\AccountingApi::class );
+                $xero = resolve( AccountingApi::class );
                 $organisationName = $xero->getOrganisations( $xeroCredentials->getTenantId() )->getOrganisations()[ 0 ]->getName();
                 $user = $xeroCredentials->getUser();
                 $username = "{$user['given_name']} {$user['family_name']} ({$user['username']})";
@@ -48,12 +52,12 @@ class XeroController extends Controller
         ] );
     }
 
-    public function performSync(Request $request,  XeroSync $xeroSync )
+    public function performSync( Request $request, XeroSync $xeroSync ): Factory|View|Application
     {
         $actions = [];
         $performing = false;
         try {
-            if ('yes' == $request->get('perform')) {
+            if( 'yes' == $request->get( 'perform' ) ) {
                 $performing = true;
                 $actions = $xeroSync->performSyncAll();
             } else {
@@ -70,6 +74,14 @@ class XeroController extends Controller
             'errorExtra' => $errorExtra ?? '',
             'actions'    => $actions,
             'performing' => $performing,
+        ] );
+    }
+
+
+    public function showRepeatingInvoices( Request $request, XeroInvoices $invoices ): Factory|View|Application
+    {
+        return view( 'ixpxero::repeating_invoices', [
+            'invoices' => $invoices->fetchRepeatingInvoices(),
         ] );
     }
 }
