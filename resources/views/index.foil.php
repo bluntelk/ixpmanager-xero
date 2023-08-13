@@ -10,7 +10,11 @@ $this->layout( 'layouts/ixpv4' );
 <?php $this->append() ?>
 
 <?php $this->section( 'page-header-postamble' ) ?>
-
+    <div class=" btn-group btn-group-sm" role="group">
+        <a class="btn btn-white" href="<?= route( 'ixpxero.info' ) ?>" title="Login Info">
+            <span class="fa fa-arrow-right"></span> Xero Login Info
+        </a>
+    </div>
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
@@ -30,7 +34,8 @@ $this->layout( 'layouts/ixpv4' );
         php artisan vendor:publish --tag=config --provider="Webfox\Xero\XeroServiceProvider"<br/>
     </code>
     <h2>Xero Scopes</h2>
-    <p>This is the config for the package that we are using to handle the integration with Xero. You will need to include the following scopes</p>
+    <p>This is the config for the package that we are using to handle the integration with Xero. You will need to
+        include the following scopes</p>
     <ul>
         <li>accounting.contacts</li>
         <li>accounting.settings.read</li>
@@ -50,7 +55,8 @@ $this->layout( 'layouts/ixpv4' );
         either inject your config into the environment (preferred) or update the config to include the client id and
         secret provided to you.</p>
     <p>
-        <a href="<?= route( 'xero.auth.success' ) ?>" class="btn btn-primary btn-lg active" role="button" aria-pressed="true">I have updated my config, let me continue!</a>
+        <a href="<?= route( 'xero.auth.success' ) ?>" class="btn btn-primary btn-lg active" role="button"
+           aria-pressed="true">I have updated my config, let me continue!</a>
     </p>
 <?php elseif( $t->connected ): ?>
     <h1>You are connected to Xero</h1>

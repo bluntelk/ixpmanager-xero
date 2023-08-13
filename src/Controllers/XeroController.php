@@ -7,7 +7,10 @@ use bluntelk\IxpManagerXero\Services\XeroSync;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Filesystem\FilesystemManager;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Redirector;
 use IXP\Http\Controllers\Controller;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
@@ -52,6 +55,44 @@ class XeroController extends Controller
         ] );
     }
 
+    public function xeroDetails(): Factory|View|Application
+    {
+        try {
+            /** @var OauthCredentialManager $manager */
+            $manager = resolve( OauthCredentialManager::class );
+            return view( 'ixpxero::info', [
+                'exists'          => $manager->exists(),
+                'user'            => $manager->getUser(),
+                'hasAccessToken'  => (bool)$manager->getAccessToken(),
+                'hasRefreshToken' => (bool)$manager->getRefreshToken(),
+                'expires'         => $manager->getExpires(),
+                'isExpired'       => $manager->isExpired(),
+            ] );
+        } catch( \Exception $e ) {
+            return view( 'ixpxero::info', [
+                'exists'          => false,
+                'user'            => [ 'given_name' => '', 'family_name' => '', 'email' => '', 'user_id' => '', 'username' => '' ],
+                'hasAccessToken'  => false,
+                'hasRefreshToken' => false,
+                'expires'         => 0,
+                'isExpired'       => true,
+            ] );
+        }
+    }
+
+    public function nukeLogin( Request $request ): Redirector|Application|RedirectResponse
+    {
+        $files = resolve( FilesystemManager::class );
+        $disk = $files->disk( config( 'xero.credential_disk', config( 'filesystems.default' ) ) );
+        if( $disk->exists( 'xero.json' ) ) {
+            $ok = $disk->delete( 'xero.json' );
+            $request->session()->flash( 'status', $ok ? 'Success, nuked login info' : 'Unable to remove login info' );
+        } else {
+            $request->session()->flash( 'status', 'You are not logged in' );
+        }
+        return redirect( route( 'xero.auth.success' ) );
+    }
+
     public function performSync( Request $request, XeroSync $xeroSync ): Factory|View|Application
     {
         $actions = [];
@@ -81,8 +122,7 @@ class XeroController extends Controller
     public function showRepeatingInvoices( Request $request, XeroInvoices $invoices ): Factory|View|Application
     {
         return view( 'ixpxero::repeating_invoices', [
-            'invoices' => $invoices->fetchRepeatingInvoices(),
-            'customers' => $invoices->listIxpCustomers(),
+            'bills' => $invoices->buildReportingData(),
         ] );
     }
 }

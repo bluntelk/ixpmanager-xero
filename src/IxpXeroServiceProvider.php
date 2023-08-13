@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use IXP\Events\Customer\BillingDetailsChanged;
+use Psr\Log\LoggerInterface;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
 
@@ -33,6 +34,7 @@ class IxpXeroServiceProvider extends ServiceProvider
         } );
         $this->app->bind( XeroInvoices::class, function( Application $app ) {
             return new XeroInvoices(
+                $app->make( LoggerInterface::class ),
                 $app->make( OauthCredentialManager::class ),
                 $app->make( AccountingApi::class )
             );

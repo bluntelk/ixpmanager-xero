@@ -19,53 +19,47 @@ Xero Repeating Invoices
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
-<table class="table">
+<table class="table table-striped">
     <thead>
     <tr>
-        <th>Xero Customer</th>
-        <th>IXP Customer</th>
-        <th>Sub Total</th>
-        <th>Tax</th>
-        <th>Total</th>
-        <th>Setup</th>
+        <th>Customer</th>
+        <th>Customer Type</th>
+        <th>Date Joined</th>
+        <th>Services</th>
+        <th>Needs Billing</th>
     </tr>
     </thead>
     <tbody>
-    <?php foreach( $t->invoices as /** @var RepeatingInvoice $invoice */
-                   $invoice ): ?>
-        <?php
-        $key = $invoice->getContact()?->getContactNumber() ?? '';
-        $isSetup = (bool)( $t->customers[ $key ] ?? false );
-        if( $isSetup ) {
-            $setupMembers[ $key ] = $t->customers[ $key ];
-        }
-        ?>
-        <tr <?php if( $isSetup ): ?>class="bg-success" <?php endif ?>>
-            <td><?= $invoice->getContact()?->getName() ?></td>
-            <td><?= $t->customers[ $invoice->getContact()?->getContactNumber() ]->name ?? '' ?></td>
-            <td class="text-right mono"><?= number_format( $invoice->getSubTotal(), 2 ) ?></td>
-            <td class="text-right mono"><?= number_format( $invoice->getTotalTax(), 2 ) ?></td>
-            <td class="text-right mono"><?= number_format( $invoice->getTotal(), 2 ) ?></td>
-            <td><?= $isSetup ? 'Yes' : 'No' ?></td>
+    <?php foreach( $t->bills as $bill ): ?>
+        <tr>
+            <td><?= $bill['customer']->name ?></td>
+            <td><?= $bill['customer']->type() ?></td>
+            <td><?= $bill['customer']->datejoin->format('Y-m-d') ?></td>
+            <td>
+                <table class="table">
+                <?php foreach( $bill['services'] as $service ): ?>
+                <tr>
+                    <td><?= $service->vlan_name ?></td>
+                    <td class="text-right mono"><?= $service->speed / 1000 ?>gbps</td>
+                    <td><?= $service->location_name ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </table>
+            </td>
+            <td>
+                <table class="table">
+                <?php foreach( $bill['servicesNeedingBilling'] as $service ): ?>
+                <tr>
+                    <td><?= $service->vlan_name ?></td>
+                    <td><?= $service->speed / 1000 ?>gbps</td>
+                    <td><?= $service->location_name ?></td>
+                </tr>
+                <?php endforeach; ?>
+                </table>
+            </td>
         </tr>
     <?php endforeach; ?>
 
-    <?php foreach( $t->customers as /** @var Customer $customer */
-                   $key => $customer ): ?>
-        <?php
-        if( isset( $setupMembers[ $key ] ) ) {
-            continue;
-        }
-        ?>
-        <tr>
-            <td></td>
-            <td><?= $customer->name ?? '' ?></td>
-            <td class="text-right mono"></td>
-            <td class="text-right mono"></td>
-            <td class="text-right mono"></td>
-            <td>No</td>
-        </tr>
-    <?php endforeach; ?>
 
     </tbody>
 </table>
