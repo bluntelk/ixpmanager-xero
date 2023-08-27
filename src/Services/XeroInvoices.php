@@ -2,12 +2,14 @@
 
 namespace bluntelk\IxpManagerXero\Services;
 
+use bluntelk\IxpManagerXero\Models\XeroLineItem;
 use Illuminate\Support\Facades\DB;
 use IXP\Models\Customer;
 use Psr\Log\LoggerInterface;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
 use XeroAPI\XeroPHP\ApiException;
+use XeroAPI\XeroPHP\Models\Accounting\Items;
 use XeroAPI\XeroPHP\Models\Accounting\RepeatingInvoice;
 
 class XeroInvoices
@@ -43,6 +45,59 @@ class XeroInvoices
         }
     }
 
+    public function fetchXeroLineItems(): Items
+    {
+        try {
+            return $this->accountingApi->getItems(
+                $this->xeroCredentials->getTenantId(),
+            );
+        } catch( ApiException $e ) {
+            $this->logger->error( "Failed to communicate with Xero to get invoices line items" );
+            $this->logger->error( $e->getMessage() );
+            return new Items();
+        }
+    }
+
+    /**
+     * Get the list of local service names and the matching Xero line item to check against
+     *
+     * @return array
+     */
+    public function getServices(): array
+    {
+        $services = [];
+
+        foreach( $this->getServiceList() as $local ) {
+            $localServiceName = $this->getGeneralLineItemCode( $local->vlan_name, $local->speed );
+
+            $itemMatch = XeroLineItem::firstOrNew( [ 'local_service' => $localServiceName, 'cust_id' => null ] );
+            $itemMatch->save();
+        }
+
+
+        return XeroLineItem::orderBy( 'local_service' )
+            ->select('cust.name as customer_name', 'xero_line_items.*')
+            ->leftJoin('cust', 'cust_id', '=', 'cust.id')
+            ->get()
+            ->toArray();
+    }
+
+    private function getServiceList(): array
+    {
+        return DB::table( 'vlan' )
+            ->select( 'vlan.name as vlan_name', 'physicalinterface.speed' )
+            ->join( 'vlaninterface', 'vlan.id', '=', 'vlaninterface.vlanid' )
+            ->join( 'virtualinterface', 'vlaninterface.virtualinterfaceid', '=', 'virtualinterface.id' )
+            ->join( 'physicalinterface', 'physicalinterface.virtualinterfaceid', '=', 'virtualinterface.id' )
+            ->whereNotNull( 'physicalinterface.speed' )
+            ->groupBy( 'vlan.name', 'physicalinterface.speed' )
+            ->orderBy( 'vlan.name' )
+            ->orderBy( 'physicalinterface.speed' )
+            ->get()
+            ->toArray();
+    }
+
+
     /**
      * @param Customer $customer
      * @return array<int, object{cust_name: string, date_join: string, vlan_name: string, speed: int, location_name: string, city: string}>
@@ -72,13 +127,14 @@ class XeroInvoices
     }
 
     /**
-     * @param object{cust_name: string, date_join: string, vlan_name: string, speed: int, location_name: string, city: string} $item
+     * @param string $vlanName
+     * @param int $speed
      * @return string
      */
-    protected function makeGeneralLineItemCode( object $item ): string
+    protected function getGeneralLineItemCode( string $vlanName, int $speed ): string
     {
-        $speed = $item->speed / 1000;
-        return strtolower( "{$item->vlan_name}-{$speed}gbps" );
+        $speed = $speed / 1000;
+        return str_replace( ' ', '-', strtolower( "{$vlanName}-{$speed}gbps" ) );
     }
 
     /**
@@ -97,29 +153,35 @@ class XeroInvoices
 
         $ret = [];
         foreach( $this->listIxpCustomers() as $id => $customer ) {
-            $invoice = null;
+            if( $customer->type != Customer::TYPE_FULL ) {
+                continue;
+            }
+            $invoices = [];
             foreach( $repeatingInvoices as $repeatingInvoice ) {
+                // we stash "MemberId=<id>" in the ContactNumber
                 $key = $repeatingInvoice->getContact()?->getContactNumber() ?? '';
                 if( $key == $id ) {
-                    $invoice = $repeatingInvoice;
+                    $invoices[] = $repeatingInvoice;
                 }
             }
 
             $servicesNeedingBilling = [];
             $services = $this->fetchCustomerServices( $customer );
-            if( $invoice ) {
+            if( $invoices ) {
                 foreach( $services as $service ) {
-                    $generalLineItemCode = $this->makeGeneralLineItemCode( $service );
+                    $generalLineItemCode = $this->getGeneralLineItemCode( $service->vlan_name, $service->speed );
                     $customerLineItemCode = $this->makeCustomerLineItemCode( $service );
 
-                    foreach ($invoice->getLineItems() as $lineItem) {
-                        if ($lineItem->getItemCode() == $generalLineItemCode) {
-                            $this->logger->debug("Customer has general configured repeating line item for this service", [$service]);
-                            continue 2;
-                        }
-                        if ($lineItem->getItemCode() == $customerLineItemCode) {
-                            $this->logger->debug("Customer has customer specific configured repeating line item for this service", [$service]);
-                            continue 2;
+                    foreach( $invoices as $invoice ) {
+                        foreach( $invoice->getLineItems() as $lineItem ) {
+                            if( $lineItem->getItemCode() == $generalLineItemCode ) {
+                                $this->logger->debug( "Customer has general line item configured repeating line item for this service", [ $service ] );
+                                continue 3;
+                            }
+                            if( $lineItem->getItemCode() == $customerLineItemCode ) {
+                                $this->logger->debug( "Customer has customer specific configured repeating line item for this service", [ $service ] );
+                                continue 3;
+                            }
                         }
                     }
                     $servicesNeedingBilling[] = $service;
@@ -130,7 +192,7 @@ class XeroInvoices
 
             $ret[] = [
                 'customer'               => $customer,
-                'invoice'                => $invoice,
+                'invoices'               => $invoices,
                 'services'               => $services,
                 'servicesNeedingBilling' => $servicesNeedingBilling,
             ];

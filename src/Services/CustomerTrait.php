@@ -17,7 +17,7 @@ trait CustomerTrait
     public function listIxpCustomers(): iterable
     {
         $customers = [];
-        foreach (Customer::active()->get() as $customer) {
+        foreach (Customer::active()->orderBy('name')->get() as $customer) {
             $key = $this->getMemberId($customer);
             $customers[$key] = $customer;
         }

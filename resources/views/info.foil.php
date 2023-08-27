@@ -14,6 +14,9 @@ $this->layout( 'layouts/ixpv4' );
         <a class="btn btn-danger" href="<?= route( 'ixpxero.nuke' ) ?>" title="Nuke Login Info">
             <span class="fa fa-arrow-right"></span> Nuke Xero Login Info
         </a>
+        <a class="btn btn-white" href="<?= route( 'xero.auth.success' ) ?>" title="Xero Admin">
+            <span class="fa fa-arrow-right"></span> Xero Admin
+        </a>
     </div>
 <?php $this->append() ?>
 

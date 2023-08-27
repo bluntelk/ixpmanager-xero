@@ -70,11 +70,18 @@ $this->layout( 'layouts/ixpv4' );
 
     <h2>Sync Actions</h2>
     <div class="btn-group mb-4">
-        <a href="<?= route( 'xero.sync' ) ?>" class="btn btn-secondary btn-large mt-4">
+        <a href="<?= route( 'ixpxero.sync' ) ?>" class="btn btn-secondary btn-large mt-4">
             View Sync Actions
         </a>
-        <a href="<?= route( 'xero.repeating.invoices' ) ?>" class="btn btn-secondary btn-large mt-4">
-            Invoice Thingy
+    </div>
+
+    <h2>Invoice Actions</h2>
+    <div class="btn-group mb-4">
+        <a href="<?= route( 'xero.repeating.invoices' ) ?>" class="btn btn-primary btn-large mt-4">
+            <span class="fa fa-file-text-o"></span> Customers Requiring Invoicing
+        </a>
+        <a href="<?= route( 'ixpxero.line-item.index' ) ?>" class="btn btn-white btn-large mt-4">
+            <span class="fa fa-cog"></span> Configure Line Items
         </a>
     </div>
 

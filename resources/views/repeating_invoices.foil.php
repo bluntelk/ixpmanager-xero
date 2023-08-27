@@ -16,9 +16,13 @@ Xero Repeating Invoices
 <?php $this->append() ?>
 
 <?php $this->section( 'page-header-postamble' ) ?>
+<a class="btn btn-white btn-sm" href="<?= route( 'xero.auth.success' ) ?>" title="Xero Admin">
+    <span class="fa fa-arrow-right"></span> Xero Admin
+</a>
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
+<p class="text-info">Showing all FULL Customers</p>
 <table class="table table-striped">
     <thead>
     <tr>

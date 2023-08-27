@@ -1,6 +1,6 @@
 <?php
 
-namespace bluntelk\IxpManagerXero\Controllers;
+namespace bluntelk\IxpManagerXero\Http\Controllers;
 
 use bluntelk\IxpManagerXero\Services\XeroInvoices;
 use bluntelk\IxpManagerXero\Services\XeroSync;
@@ -117,7 +117,6 @@ class XeroController extends Controller
             'performing' => $performing,
         ] );
     }
-
 
     public function showRepeatingInvoices( Request $request, XeroInvoices $invoices ): Factory|View|Application
     {

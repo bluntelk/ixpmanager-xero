@@ -3,7 +3,7 @@
 namespace bluntelk\IxpManagerXero;
 
 use bluntelk\IxpManagerXero\Console\Commands\SyncCommand;
-use bluntelk\IxpManagerXero\Controllers\XeroController;
+use bluntelk\IxpManagerXero\Http\Controllers\XeroController;
 use bluntelk\IxpManagerXero\Services\XeroInvoices;
 use bluntelk\IxpManagerXero\Services\XeroSync;
 use Illuminate\Foundation\Application;
