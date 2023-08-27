@@ -9,5 +9,6 @@ Route::group( [ 'middleware' => [ 'web' ] ], function() {
     Route::get( '/admin/xero/nuke-login', [ XeroController::class, 'nukeLogin' ] )->name( 'ixpxero.nuke' );
     Route::get( '/admin/xero/perform-sync', [ XeroController::class, 'performSync' ] )->name( 'ixpxero.sync' );
     Route::get( '/admin/xero/repeating-invoices', [ XeroController::class, 'showRepeatingInvoices' ] )->name( 'xero.repeating.invoices' );
+    Route::get( '/admin/xero/repeating-invoices/{customer_id}', [ XeroController::class, 'showRepeatingInvoicesForCustomer' ] )->name( 'xero.repeating.invoices.customer' );
     Route::resource( '/admin/xero/line-item', XeroLineItemController::class )->names('ixpxero.line-item');
 } );

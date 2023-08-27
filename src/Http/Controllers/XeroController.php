@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Redirector;
 use IXP\Http\Controllers\Controller;
+use IXP\Models\Customer;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
 
@@ -122,6 +123,15 @@ class XeroController extends Controller
     {
         return view( 'ixpxero::repeating_invoices', [
             'bills' => $invoices->buildReportingData(),
+        ] );
+    }
+
+    public function showRepeatingInvoicesForCustomer( Request $request, XeroInvoices $invoices, int $customerId ): Factory|View|Application
+    {
+        $customer = Customer::find(['id' => $customerId])->first();
+        $id = $invoices->getMemberId($customer);
+        return view( 'ixpxero::repeating_invoices', [
+            'bills' => [$invoices->buildReportingDataForCustomer($id, $customer, null)],
         ] );
     }
 }

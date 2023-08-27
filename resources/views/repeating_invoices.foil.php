@@ -36,7 +36,10 @@ Xero Repeating Invoices
     <tbody>
     <?php foreach( $t->bills as $bill ): ?>
         <tr>
-            <td><?= $bill['customer']->name ?></td>
+            <td>
+                <a href="<?= route('xero.repeating.invoices.customer', ['customer_id' => $bill['customer']->id]) ?>">
+                    <?= $bill['customer']->name ?></a>
+            </td>
             <td><?= $bill['customer']->type() ?></td>
             <td><?= $bill['customer']->datejoin->format('Y-m-d') ?></td>
             <td>

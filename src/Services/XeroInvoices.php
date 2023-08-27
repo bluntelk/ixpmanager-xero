@@ -76,8 +76,8 @@ class XeroInvoices
 
 
         return XeroLineItem::orderBy( 'local_service' )
-            ->select('cust.name as customer_name', 'xero_line_items.*')
-            ->leftJoin('cust', 'cust_id', '=', 'cust.id')
+            ->select( 'cust.name as customer_name', 'xero_line_items.*' )
+            ->leftJoin( 'cust', 'cust_id', '=', 'cust.id' )
             ->get()
             ->toArray();
     }
@@ -107,6 +107,7 @@ class XeroInvoices
         return DB::table( 'cust' )
             ->select(
                 'cust.name as cust_name',
+                'cust.id as cust_id',
                 'cust.datejoin as date_join',
                 'vlan.name as vlan_name',
                 'physicalinterface.speed',
@@ -137,14 +138,22 @@ class XeroInvoices
         return str_replace( ' ', '-', strtolower( "{$vlanName}-{$speed}gbps" ) );
     }
 
-    /**
-     * @param object{cust_name: string, date_join: string, vlan_name: string, speed: int, location_name: string, city: string} $item
-     * @return string
-     */
-    protected function makeCustomerLineItemCode( object $item ): string
+    protected function getXeroItemCode( string $localService, int $custId ): ?string
     {
-        $speed = $item->speed / 1000;
-        return strtolower( "{$item->cust_name}-{$item->vlan_name}-{$speed}gbps" );
+        $items = XeroLineItem::where( 'local_service', '=', $localService )
+            ->get();
+
+        foreach( $items as $item ) {
+            if( $item[ 'cust_id' ] === $custId ) {
+                return $item[ 'xero_service' ];
+            }
+        }
+
+        if( $items->count() ) {
+            return $items[ 0 ][ 'xero_service' ];
+        }
+
+        return null;
     }
 
     public function buildReportingData(): array
@@ -153,52 +162,79 @@ class XeroInvoices
 
         $ret = [];
         foreach( $this->listIxpCustomers() as $id => $customer ) {
-            if( $customer->type != Customer::TYPE_FULL ) {
-                continue;
+            if( $data = $this->buildReportingDataForCustomer( $id, $customer, $repeatingInvoices ) ) {
+                $ret[] = $data;
             }
-            $invoices = [];
-            foreach( $repeatingInvoices as $repeatingInvoice ) {
-                // we stash "MemberId=<id>" in the ContactNumber
-                $key = $repeatingInvoice->getContact()?->getContactNumber() ?? '';
-                if( $key == $id ) {
-                    $invoices[] = $repeatingInvoice;
-                }
-            }
-
-            $servicesNeedingBilling = [];
-            $services = $this->fetchCustomerServices( $customer );
-            if( $invoices ) {
-                foreach( $services as $service ) {
-                    $generalLineItemCode = $this->getGeneralLineItemCode( $service->vlan_name, $service->speed );
-                    $customerLineItemCode = $this->makeCustomerLineItemCode( $service );
-
-                    foreach( $invoices as $invoice ) {
-                        foreach( $invoice->getLineItems() as $lineItem ) {
-                            if( $lineItem->getItemCode() == $generalLineItemCode ) {
-                                $this->logger->debug( "Customer has general line item configured repeating line item for this service", [ $service ] );
-                                continue 3;
-                            }
-                            if( $lineItem->getItemCode() == $customerLineItemCode ) {
-                                $this->logger->debug( "Customer has customer specific configured repeating line item for this service", [ $service ] );
-                                continue 3;
-                            }
-                        }
-                    }
-                    $servicesNeedingBilling[] = $service;
-                }
-            } else {
-                $servicesNeedingBilling = $services;
-            }
-
-            $ret[] = [
-                'customer'               => $customer,
-                'invoices'               => $invoices,
-                'services'               => $services,
-                'servicesNeedingBilling' => $servicesNeedingBilling,
-            ];
         }
 
         return $ret;
     }
 
+    public function buildReportingDataForCustomer( string $id, Customer $customer, ?array $repeatingInvoices ): array
+    {
+        $repeatingInvoices ??= $this->fetchRepeatingInvoices();
+
+        if( $customer->type != Customer::TYPE_FULL ) {
+            return [];
+        }
+        $invoices = [];
+        $this->logger->debug( "Repeating Invoice Count", [ count( $repeatingInvoices ) ] );
+        $this->logger->debug( "Working With Customer", [ 'key' => $id, 'customer' => $customer->name ] );
+
+        foreach( $repeatingInvoices as $repeatingInvoice ) {
+            // we stash "MemberId=<id>" in the ContactNumber
+            $key = $repeatingInvoice->getContact()?->getContactNumber() ?? '';
+            if( $key == $id ) {
+                $this->logger->debug( "Matching Invoice For Customer", [ 'id' => $repeatingInvoice->getId() ] );
+                $invoices[] = $repeatingInvoice;
+            }
+        }
+        $this->logger->debug( "Customer Repeating Invoices", [ 'count' => count( $invoices ) ] );
+
+        $servicesNeedingBilling = [];
+        $services = $this->fetchCustomerServices( $customer );
+        $this->logger->debug( "Customer Services Count", [ 'count' => count( $services ) ] );
+        if( $invoices ) {
+            foreach( $services as $service ) {
+                $localServiceCode = $this->getGeneralLineItemCode( $service->vlan_name, $service->speed );
+                $xeroLineItemCode = $this->getXeroItemCode( $localServiceCode, $service->cust_id );
+
+                $this->logger->debug(
+                    "Attempting to match Customer Service",
+                    [ $service, $localServiceCode, $xeroLineItemCode ]
+                );
+                foreach( $invoices as $invoice ) {
+                    if ('DRAFT' === $invoice->getStatus()) {
+                        $this->logger->info("Ignoring Repeating invoice in DRAFT Status", ['invoice' => $invoice->getId()]);
+                        continue;
+                    }
+                    foreach( $invoice->getLineItems() as $lineItem ) {
+                        if( $xeroLineItemCode && $lineItem->getItemCode() == $xeroLineItemCode ) {
+                            $this->logger->debug(
+                                "We have a repeating invoice for this customer with a matching line item",
+                                [
+                                    'local'   => $localServiceCode,
+                                    'xero'    => $lineItem->getItemCode(),
+                                    'invoice' => $invoice->getId(),
+                                    'status' => $invoice->getStatus(),
+                                ]
+                            );
+                            continue 3;
+                        }
+                    }
+                }
+
+                $servicesNeedingBilling[] = $service;
+            }
+        } else {
+            $servicesNeedingBilling = $services;
+        }
+
+        return [
+            'customer'               => $customer,
+            'invoices'               => $invoices,
+            'services'               => $services,
+            'servicesNeedingBilling' => $servicesNeedingBilling,
+        ];
+    }
 }

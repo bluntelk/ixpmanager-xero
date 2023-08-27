@@ -55,6 +55,7 @@ $setupMembers = [];
         <?= Former::select( 'xero_service' )
             ->value($t->item->xero_service ?? null)
             ->fromQuery( $t->xero_services )
+            ->addClass( 'chzn-select' )
             ->label( 'Xero Line item' )
             ->blockHelp( "The name you have chosen for the Line Item in Xero" );
         ?>
