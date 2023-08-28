@@ -1,13 +1,15 @@
 <?php
 
+use IXP\Models\Customer;
+
 return [
     /**
      * Only sync contacts of these types
      */
     'sync_customer_types' => [
-        \IXP\Models\Customer::TYPE_FULL,
-        \IXP\Models\Customer::TYPE_ASSOCIATE,
-        \IXP\Models\Customer::TYPE_PROBONO,
+        Customer::TYPE_FULL,
+        Customer::TYPE_ASSOCIATE,
+        Customer::TYPE_PROBONO,
     ],
     /**
      * Add all of our IXP Customers to this Xero Contact Group

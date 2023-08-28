@@ -16,7 +16,7 @@ $this->layout( 'layouts/ixpv4' );
 <?php if( $t->error ): ?>
     <h1>Unable to perform sync</h1>
     <p><?= $t->error ?></p>
-    <a href="<?= route( 'xero.sync' ) ?>" class="btn btn-primary btn-large mt-4">
+    <a href="<?= route( 'ixpxero.sync' ) ?>" class="btn btn-primary btn-large mt-4">
         Try Again
     </a>
     <pre><?= $t->errorExtra ?></pre>
@@ -27,7 +27,7 @@ $this->layout( 'layouts/ixpv4' );
     <?php endif; ?>
     <p>The following actions will be performed if you click the sync button below.</p>
     <p>
-        <a class="btn btn-primary" href="<?= route( 'xero.sync', [ 'perform' => 'yes' ] ) ?>">Perform Manual Sync</a>
+        <a class="btn btn-primary" href="<?= route( 'ixpxero.sync', [ 'perform' => 'yes' ] ) ?>">Perform Manual Sync</a>
     </p>
     <table class="table table-bordered table-condensed table-hover table-striped">
         <thead>

@@ -38,7 +38,7 @@ class SyncAction
      * @param Contact|null $accountingContact
      * @param bool $performed
      */
-    public function __construct(string $action, Customer $customer, ?Contact $accountingContact, bool $performed = false)
+    public function __construct( string $action, Customer $customer, ?Contact $accountingContact, bool $performed = false )
     {
         $this->customer = $customer;
         $this->accountingContact = $accountingContact;
@@ -48,7 +48,7 @@ class SyncAction
 
     public function __toString()
     {
-        switch($this->action) {
+        switch( $this->action ) {
             case SyncAction::ACTION_CREATE:
                 return "create IXP Member `{$this->customer->name}` in Xero";
             case SyncAction::ACTION_UPDATE:

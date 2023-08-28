@@ -19,6 +19,7 @@ This is the config for the package that we are using to handle the integration w
 
     accounting.contacts
     accounting.settings.read
+    accounting.transactions.read
 
 The scopes config section may look a little like:
 
@@ -30,6 +31,7 @@ The scopes config section may look a little like:
             'offline_access',
             'accounting.contacts',
             'accounting.settings.read',
+            'accounting.transactions.read'
         ],
 
 ```

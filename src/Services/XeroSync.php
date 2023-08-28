@@ -2,31 +2,35 @@
 
 namespace bluntelk\IxpManagerXero\Services;
 
-use Ixp\Models\Customer;
 use bluntelk\IxpManagerXero\Sync\SyncAction;
 use Illuminate\Support\Facades\Log;
 use IXP\Exceptions\GeneralException;
-use Psr\Log\LoggerInterface;
+use IXP\Models\ContactGroup as IxpContactGroup;
+use Ixp\Models\Customer;
 use Webfox\Xero\OauthCredentialManager;
 use XeroAPI\XeroPHP\Api\AccountingApi;
 use XeroAPI\XeroPHP\Models\Accounting\Address;
+use XeroAPI\XeroPHP\Models\Accounting\Contact;
 use XeroAPI\XeroPHP\Models\Accounting\ContactGroup;
 use XeroAPI\XeroPHP\Models\Accounting\ContactGroups;
 use XeroAPI\XeroPHP\Models\Accounting\ContactPerson;
 use XeroAPI\XeroPHP\Models\Accounting\Contacts;
-use XeroAPI\XeroPHP\Models\Accounting\Contact;
 use XeroAPI\XeroPHP\Models\Accounting\Error;
-use XeroAPI\XeroPHP\Models\Accounting\Phone;
-use \IXP\Models\ContactGroup as IxpContactGroup;
 
 class XeroSync
 {
+    use CustomerTrait;
+
     private AccountingApi $xero;
     private OauthCredentialManager $xeroCredentials;
 
-    private $seenAsns = [];
+    private array $seenAsns = [];
 
-    protected $requiredScopes = [ 'accounting.contacts', 'accounting.settings.read' ];
+    protected array $requiredScopes = [
+        'accounting.contacts',
+        'accounting.settings.read',
+        'accounting.transactions.read'
+    ];
 
     public function __construct( OauthCredentialManager $xeroCredentials, AccountingApi $xero )
     {
@@ -43,14 +47,6 @@ class XeroSync
         }
 
         return true;
-    }
-
-    /**
-     * @return Customer[]
-     */
-    protected function listIxpCustomers(): iterable
-    {
-        return Customer::active()->get();
     }
 
     protected function getXeroAccountingContact( Customer $customer ): ?Contact
@@ -135,11 +131,6 @@ class XeroSync
         return $actions;
     }
 
-    protected function getMemberId( Customer $customer ): string
-    {
-        return 'MemberId=' . $customer->id;
-    }
-
     public function performSyncAll()
     {
         return $this->performSync( $this->prepareSync() );
@@ -156,8 +147,12 @@ class XeroSync
      * @param SyncAction[] $syncActions
      * @return SyncAction[]
      */
-    public function performSync( array $syncActions )
+    public function performSync( array $syncActions ): array
     {
+        if( !$syncActions ) {
+            Log::warning( "No Sync Actions, we do not have anyone added." );
+            return [];
+        }
         $contacts = new Contacts();
         foreach( $syncActions as $syncAction ) {
             Log::info( "About to perform sync action: {$syncAction}" );
@@ -236,7 +231,7 @@ class XeroSync
     private function makeXeroContact( SyncAction $syncAction ): Contact
     {
         $nullOr = function( $value ) {
-            return $value ? $value : null;
+            return $value ?: null;
         };
         $trimNull = function( array $arr ) {
             foreach( $arr as $k => $v ) {
@@ -298,7 +293,7 @@ class XeroSync
         $persons = [];
         $roleStr = config( 'ixpxero.billing_contact_role' );
         /** @var \IXP\Models\ContactGroup $role */
-        $role = IxpContactGroup::where('name', $roleStr)->first();
+        $role = IxpContactGroup::where( 'name', $roleStr )->first();
         /**
          * Xero will throw an if we try to add contacts when the primary contact does not have an email address
          */
@@ -331,11 +326,11 @@ class XeroSync
             'account_number'  => $memberAsn,
             'name'            => $companyName,
             'first_name'      => $nullOr( $c->companyBillingDetail->billingContactName ),
-            'addresses'       => $addresses ? $addresses : null,
+            'addresses'       => $addresses ?: null,
             'email_address'   => $nullOr( $c->companyBillingDetail->billingEmail ),
-            'phones'          => $phones ? $phones : null,
+            'phones'          => $phones ?: null,
             'tax_number'      => $nullOr( $c->companyBillingDetail->vatNumber ),
-            'contact_persons' => $persons ? $persons : null,
+            'contact_persons' => $persons ?: null,
         ] );
     }
 
