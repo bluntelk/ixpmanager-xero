@@ -25,6 +25,7 @@ $setupMembers = [];
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
+<?= $t->alerts() ?>
 <div class="row">
     <div class="col-lg-12">
         <?= Former::open()->method( $t->item ? 'PUT' : 'POST' )

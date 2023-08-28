@@ -31,7 +31,7 @@ The scopes config section may look a little like:
             'offline_access',
             'accounting.contacts',
             'accounting.settings.read',
-            'accounting.transactions.read'
+            'accounting.transactions.read',
         ],
 
 ```

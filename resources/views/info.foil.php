@@ -21,6 +21,7 @@ $this->layout( 'layouts/ixpv4' );
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
+<?= $t->alerts() ?>
     <p>
         <strong>Note:</strong> If you are trying to diagnose "invalid_redirect" errors, make sure your redirect url contains `/xero/auth/callback`
     </p>

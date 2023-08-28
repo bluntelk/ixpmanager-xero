@@ -25,6 +25,7 @@ Xero Repeating Invoices
 
 <?php $this->section( 'content' ) ?>
 <p class="text-info">Current configuration for line items</p>
+<?= $t->alerts() ?>
 <table class="table table-striped">
     <thead>
     <tr>

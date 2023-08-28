@@ -22,6 +22,7 @@ Xero Repeating Invoices
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
+<?= $t->alerts() ?>
 <p class="text-info">Showing all FULL Customers</p>
 <table class="table table-striped">
     <thead>

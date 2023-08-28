@@ -174,7 +174,7 @@ class XeroInvoices
     {
         $repeatingInvoices ??= $this->fetchRepeatingInvoices();
 
-        if( $customer->type != Customer::TYPE_FULL ) {
+        if( $customer->type != Customer::TYPE_FULL || !$customer->statusNormal() ) {
             return [];
         }
         $invoices = [];
@@ -204,8 +204,8 @@ class XeroInvoices
                     [ $service, $localServiceCode, $xeroLineItemCode ]
                 );
                 foreach( $invoices as $invoice ) {
-                    if ('DRAFT' === $invoice->getStatus()) {
-                        $this->logger->info("Ignoring Repeating invoice in DRAFT Status", ['invoice' => $invoice->getId()]);
+                    if( $invoice::STATUS_AUTHORISED !== $invoice->getStatus() ) {
+                        $this->logger->info( "Ignoring Repeating invoice Status", [ 'invoice' => $invoice->getId(), 'status' => $invoice->getStatus() ] );
                         continue;
                     }
                     foreach( $invoice->getLineItems() as $lineItem ) {
@@ -216,7 +216,7 @@ class XeroInvoices
                                     'local'   => $localServiceCode,
                                     'xero'    => $lineItem->getItemCode(),
                                     'invoice' => $invoice->getId(),
-                                    'status' => $invoice->getStatus(),
+                                    'status'  => $invoice->getStatus(),
                                 ]
                             );
                             continue 3;

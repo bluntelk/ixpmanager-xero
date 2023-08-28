@@ -13,6 +13,7 @@ $this->layout( 'layouts/ixpv4' );
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
+<?= $t->alerts() ?>
 <?php if( $t->error ): ?>
     <h1>Unable to perform sync</h1>
     <p><?= $t->error ?></p>

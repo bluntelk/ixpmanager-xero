@@ -18,6 +18,7 @@ $this->layout( 'layouts/ixpv4' );
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
+<?= $t->alerts() ?>
 <?php if( $t->error ): ?>
     <h1>Your connection to Xero failed</h1>
     <p><?= $t->error ?></p>
@@ -49,6 +50,7 @@ $this->layout( 'layouts/ixpv4' );
             'offline_access',
             'accounting.contacts',
             'accounting.settings.read',
+            'accounting.transactions.read',
         ],</pre>
     <h2>Integrations</h2>
     <p>In the config file you can see the client id and client secret config are set from the environment. You can

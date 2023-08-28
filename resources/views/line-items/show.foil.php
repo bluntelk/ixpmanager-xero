@@ -24,6 +24,7 @@ Show Line Item Mapping
 <?php $this->append() ?>
 
 <?php $this->section( 'content' ) ?>
+<?= $t->alerts() ?>
 
 <?php $this->append() ?>
 
