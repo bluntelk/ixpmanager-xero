@@ -4,54 +4,23 @@ namespace bluntelk\IxpManagerXero\Console\Commands;
 
 use bluntelk\IxpManagerXero\Services\XeroSync;
 use IXP\Models\Customer;
-use Illuminate\Console\Command;
-use Illuminate\Log\Events\MessageLogged;
-use Illuminate\Support\Facades\Event;
-use Psr\Log\LogLevel;
 use Symfony\Component\Console\Output\OutputInterface;
 
-class SyncCommand extends Command
+class SyncCommand extends LoggableCommand
 {
     protected $signature = 'xero:sync {customer_id?}';
 
     protected $description = 'Sync all members into Xero';
 
-    public function __construct() {
-        parent::__construct();
-        Event::listen(MessageLogged::class, function(MessageLogged $event) {
-            $output = $this->getOutput();
-            if (!$output) {
-                // no output? no problem - let's just be quiet
-                return;
-            }
-
-            switch($event->level) {
-                case LogLevel::CRITICAL:
-                case LogLevel::ERROR:
-                case LogLevel::ALERT:
-                case LogLevel::EMERGENCY:
-                    $output->error($event->message);
-                    break;
-                case LogLevel::WARNING:
-                    $output->warning($event->message);
-                    break;
-                case LogLevel::DEBUG:
-                    $output->writeln($event->message, OutputInterface::VERBOSITY_VERY_VERBOSE);
-                    break;
-                case LogLevel::INFO:
-                default:
-                    $output->writeln($event->message, OutputInterface::VERBOSITY_VERBOSE);
-                    break;
-            }
-        });
-    }
-
-    public function handle(XeroSync $xeroSync)
+    public function handle(XeroSync $xeroSync): int
     {
         $this->output->title("IXP Manager -> Xero Sync");
 
         if (!$xeroSync->isXeroConfigValid()) {
-            $this->error("Your Xero Config is invalid. Please follow the setup steps in the README.md", OutputInterface::VERBOSITY_QUIET);
+            $this->error(
+                "Your Xero Config is invalid. Please follow the setup steps in the README.md",
+                OutputInterface::VERBOSITY_QUIET
+            );
             return 1;
         }
         if ($this->argument('customer_id') && $customer = Customer::find($this->argument('customer_id'))) {

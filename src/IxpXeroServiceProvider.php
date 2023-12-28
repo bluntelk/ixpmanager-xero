@@ -2,10 +2,12 @@
 
 namespace bluntelk\IxpManagerXero;
 
+use bluntelk\IxpManagerXero\Console\Commands\RefreshXeroToken;
 use bluntelk\IxpManagerXero\Console\Commands\SyncCommand;
 use bluntelk\IxpManagerXero\Http\Controllers\XeroController;
 use bluntelk\IxpManagerXero\Services\XeroInvoices;
 use bluntelk\IxpManagerXero\Services\XeroSync;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
@@ -61,6 +63,7 @@ class IxpXeroServiceProvider extends ServiceProvider
         if( $this->app->runningInConsole() ) {
             $this->commands( [
                 SyncCommand::class,
+                RefreshXeroToken::class
             ] );
         } else {
             Event::listen( BillingDetailsChanged::class, function( BillingDetailsChanged $event ) {
@@ -72,5 +75,10 @@ class IxpXeroServiceProvider extends ServiceProvider
                 }
             } );
         }
+
+        // scheduled items
+        $this->callAfterResolving(Schedule::class, function (Schedule $schedule) {
+            $schedule->command(RefreshXeroToken::class)->weekly();
+        });
     }
 }

@@ -3,6 +3,7 @@
     "description": "IXP Manager Integration with Xero",
     "type": "library",
     "require": {
+        "php": "^8.0",
         "laravel/framework": "^8",
         "foil/foil": "^0.6",
         "webfox/laravel-xero-oauth2": "^4.1",
