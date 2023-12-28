@@ -2,6 +2,7 @@
 
 namespace bluntelk\IxpManagerXero\Console\Commands;
 
+use bluntelk\IxpManagerXero\Services\DiscordNotifier;
 use Webfox\Xero\OauthCredentialManager;
 
 class RefreshXeroToken extends LoggableCommand
@@ -18,6 +19,7 @@ class RefreshXeroToken extends LoggableCommand
             $this->output->success("Refreshed.");
         } catch (\Exception $e) {
             $this->output->error($e->getMessage());
+            DiscordNotifier::notifyError($e, "Refreshing OAuth Token");
         }
 
         return 0;

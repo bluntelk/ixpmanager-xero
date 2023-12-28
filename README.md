@@ -12,6 +12,7 @@ Please perform the following config
 In your ixpmanager base dir, run (if you haven't already)
 
     php artisan vendor:publish --tag=config --provider="Webfox\Xero\XeroServiceProvider"
+    php artisan vendor:publish --provider="bluntelk\IxpManagerXero\IxpXeroServiceProvider"
     
 ## Xero Scopes
 

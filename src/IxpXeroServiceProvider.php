@@ -5,6 +5,7 @@ namespace bluntelk\IxpManagerXero;
 use bluntelk\IxpManagerXero\Console\Commands\RefreshXeroToken;
 use bluntelk\IxpManagerXero\Console\Commands\SyncCommand;
 use bluntelk\IxpManagerXero\Http\Controllers\XeroController;
+use bluntelk\IxpManagerXero\Services\DiscordNotifier;
 use bluntelk\IxpManagerXero\Services\XeroInvoices;
 use bluntelk\IxpManagerXero\Services\XeroSync;
 use Illuminate\Console\Scheduling\Schedule;
@@ -57,7 +58,7 @@ class IxpXeroServiceProvider extends ServiceProvider
         $this->loadViewsFrom( __DIR__ . '/../resources/views', 'ixpxero' );
         $this->publishes( [
             __DIR__ . '/../resources/views'    => resource_path( 'views/vendor/ixpxero' ),
-            __DIR__ . '/../config/ixpxero.php' => config_path( 'ixpxero-config.php' ),
+            __DIR__ . '/../config/ixpxero.php' => config_path( 'ixpxero.php' ),
         ] );
 
         if( $this->app->runningInConsole() ) {
@@ -72,6 +73,7 @@ class IxpXeroServiceProvider extends ServiceProvider
                     app( XeroSync::class )->performSyncOne( $customer );
                 } catch( \Exception $e ) {
                     Log::error( "Failed to perform sync", [ $e->getMessage() ] );
+                    DiscordNotifier::notifyError($e, "Perform Sync One On Billing Details Change");
                 }
             } );
         }

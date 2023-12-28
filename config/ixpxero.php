@@ -26,4 +26,9 @@ return [
      * All contacts with this role will be added to their respective Contact in Xero
      */
     'billing_contact_role' => 'Billing',
+
+    /**
+     * Where to send notifications if things go wrong
+     */
+    'discord_webhook' => '',
 ];

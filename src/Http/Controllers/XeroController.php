@@ -2,6 +2,7 @@
 
 namespace bluntelk\IxpManagerXero\Http\Controllers;
 
+use bluntelk\IxpManagerXero\Services\DiscordNotifier;
 use bluntelk\IxpManagerXero\Services\XeroInvoices;
 use bluntelk\IxpManagerXero\Services\XeroSync;
 use Illuminate\Contracts\Foundation\Application;
@@ -44,6 +45,7 @@ class XeroController extends Controller
             // This can happen if the credentials have been revoked or there is an error with the organisation (e.g. it's expired)
             $error = $e->getMessage();
             $errorExtra = $e->getTraceAsString();
+            DiscordNotifier::notifyError($e, "IXP Xero Integration Index Page");
         }
 
         return view( 'ixpxero::index', [
@@ -109,6 +111,7 @@ class XeroController extends Controller
             // This can happen if the credentials have been revoked or there is an error with the organisation (e.g. it's expired)
             $error = $e->getMessage();
             $errorExtra = $e->getTraceAsString();
+            DiscordNotifier::notifyError($e, "Perform Sync");
         }
 
         return view( 'ixpxero::sync_actions', [
