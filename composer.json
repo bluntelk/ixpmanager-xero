@@ -4,7 +4,7 @@
     "type": "library",
     "require": {
         "php": "^8.0",
-        "laravel/framework": "^8 | ^9 | ^10 | ^11",
+        "laravel/framework": "^8 | ^9 | ^10 | ^11 | ^12",
         "foil/foil": "^0.6",
         "webfox/laravel-xero-oauth2": "^4.1",
         "xeroapi/xero-php-oauth2": "^5"
