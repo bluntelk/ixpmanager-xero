@@ -6,8 +6,8 @@
         "php": "^8.0",
         "laravel/framework": "^8 | ^9 | ^10 | ^11 | ^12",
         "foil/foil": "^0.6",
-        "webfox/laravel-xero-oauth2": "^4.1",
-        "xeroapi/xero-php-oauth2": "^5"
+        "webfox/laravel-xero-oauth2": "^4.1 | ^5 | ^6",
+        "xeroapi/xero-php-oauth2": "^5 | ^6 | ^7 | ^8 | ^9 | ^10"
     },
     "license": "MIT",
     "authors": [
